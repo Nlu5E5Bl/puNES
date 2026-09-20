@@ -10,19 +10,11 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 string(TIMESTAMP COMPILED_TIMESTAMP "%m%d%Y%H%M%S")
 
-#variable_watch(ENABLE_WIN_STATIC_QT560)
-
 # Options
 option(ENABLE_GIT_INFO "Include Git info" OFF)
 option(ENABLE_RELEASE "Build release version" ON)
-option(ENABLE_FFMPEG "Enable FFMPEG support" ON)
-option(ENABLE_OPENGL "Use OpenGL support instead of Direct3D 9 (only for Windows)" ON)
-option(ENABLE_OPENGL_CG "Enable OpenGL nVidia Cg Toolkit support" OFF)
-option(ENABLE_FULLSCREEN_RESFREQ "Enable Fullscreen resolution and auto frequency" ON)
-option(ENABLE_QT5_LIBS "Force use of QT5 libraries" OFF)
-option(ENABLE_WIN_STATIC_QT5 "Use precompiled Qt static library (only for Windows)" OFF)
-option(ENABLE_WIN_STATIC_QT560 "Use precompiled Qt 5.6.3 static library (only for Windows)" OFF)
-option(DISABLE_PORTABLE_MODE "Disable compiling portable mode management (useful in sandbox environments like Flatpak)" OFF)
+option(DISABLE_PORTABLE_MODE "Disable compiling portable mode management" OFF)
+option(ENABLE_TESTS "Build the unit test harness in tests/" OFF)
 
 if (ENABLE_GIT_INFO)
 	find_package(Git)
@@ -67,9 +59,6 @@ configure_file(xdelta_config.h.in config.h)
 
 configure_file(compiled.h.in compiled.h)
 
-include(TargetArch)
-target_architecture(HOST_CPU)
-
 # handling external dependencies
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_AUTOMOC ON)
@@ -80,150 +69,93 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS gui/designer)
 set(QT_LIBS_USED "")
 set(WIN_LIBS_USED "")
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	find_package(ALSA REQUIRED)
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Windows")
+	message(FATAL_ERROR
+		"This tree builds for Windows only: the ALSA, sndio and BSD/Linux "
+		"joystick backends have been removed. CMAKE_SYSTEM_NAME is "
+		"'${CMAKE_SYSTEM_NAME}'.")
 endif()
 
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
-	find_package(Sndio REQUIRED)
-	find_package(UsbHid REQUIRED)
-	set(ENABLE_OPENGL_CG OFF)
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD" OR CMAKE_SYSTEM_NAME STREQUAL "OpenBSD" OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
-	if(ENABLE_FULLSCREEN_RESFREQ)
-		find_package(X11 REQUIRED)
-	endif()
-	# No alternatives, force selection
-	set(ENABLE_OPENGL ON)
-	if(ENABLE_OPENGL_CG)
-		find_package(Cg REQUIRED)
-	endif()
-endif()
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-	set(ENABLE_QT5_LIBS ON)
-	if(ENABLE_WIN_STATIC_QT560)
-		set(ENABLE_WIN_STATIC_QT5 ON)
-	endif()
-	# No alternatives, force selection
-	set(ENABLE_OPENGL_CG ${ENABLE_OPENGL})
-	set(ENABLE_FULLSCREEN_RESFREQ ON)
-else()
-	set(ENABLE_WIN_STATIC_QT5 OFF)
-	set(ENABLE_WIN_STATIC_QT560 OFF)
-endif()
-
-# OpenGL is required for Qt, even in the case of D3D9.
-if((CMAKE_SYSTEM_NAME STREQUAL "Linux") AND (NOT OpenGL_GL_PREFERENCE))
-	# See CMP0072 for more details (cmake --help-policy CMP0072)
-	set(OpenGL_GL_PREFERENCE "GLVND")
-endif()
+# OpenGL is the only supported renderer.
 find_package(OpenGL REQUIRED)
 
-set(QT_FOUND FALSE)
-set(QT_VERSION "")
+# Qt6 is the only supported Qt. The Qt5 and static Qt5 paths went away with the
+# non-Windows backends; every Qt5 conditional in the sources is unreachable now.
+find_package(Qt6 6.0.0 REQUIRED COMPONENTS Core LinguistTools Widgets Network Svg Gui OpenGLWidgets)
+message(STATUS "Found Qt: ${Qt6_VERSION}")
 
-if(ENABLE_QT5_LIBS)
-	find_package(Qt5 5.6.3 QUIET COMPONENTS Core LinguistTools Widgets Network Svg Gui)
-	if(Qt5_FOUND)
-		set(QT_FOUND TRUE)
-		set(QT_VERSION ${Qt5_VERSION})
-	else()
-		message(FATAL_ERROR "Qt5 libraries not found.")
-	endif()
-else()
-	find_package(Qt6 6.0.0 QUIET COMPONENTS Core LinguistTools Widgets Network Svg Gui OpenGLWidgets)
-	if(Qt6_FOUND)
-		set(QT_FOUND TRUE)
-		set(QT_VERSION ${Qt6_VERSION})
-	else()
-		find_package(Qt5 5.6.3 QUIET COMPONENTS Core LinguistTools Widgets Network Svg Gui)
-		if(Qt5_FOUND)
-			set(QT_FOUND TRUE)
-			set(QT_VERSION ${Qt5_VERSION})
-		endif()
-	endif()
-endif()
-
-if(NOT QT_FOUND)
-	message(FATAL_ERROR "Qt libraries not found. Please install Qt5 or Qt6.")
-endif()
-
-message(STATUS "Found Qt: ${QT_VERSION}")
-
-if(${QT_VERSION} VERSION_LESS "5.15.0")
-	macro(qt_add_translation)
-		qt5_add_translation(${ARGN})
-	endmacro()
-	macro(qt_add_resources)
-		qt5_add_resources(${ARGN})
-	endmacro()
-endif()
-
-if(ENABLE_WIN_STATIC_QT5)
-	include(WinStaticQt)
-endif()
+set(QT_LIBS_USED
+	Qt::Core
+	Qt::Network
+	Qt::Widgets
+	Qt::Svg
+	Qt::Gui
+	Qt::OpenGLWidgets
+	)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-if(ENABLE_FFMPEG)
-	find_package(PkgConfig REQUIRED)
-	pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
-		libavformat
-		libavcodec
-		libswresample
-		libswscale
-		libavutil
-		)
-endif()
+# FFmpeg is the recording backend and it is not optional.
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(LIBAV REQUIRED IMPORTED_TARGET
+	libavformat
+	libavcodec
+	libswresample
+	libswscale
+	libavutil
+	)
 
-if(${QT_VERSION} VERSION_LESS "5.15.0")
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt5::Core)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt5::Network)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt5::Widgets)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt5::Svg)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt5::Gui)
+# Report the target architecture explicitly. The same source tree builds for
+# x86_64 and for ARM64 on the matching machine; every architecture dependent
+# piece of the code is written as a pair of branches keyed off the CPU
+# macros, so both are expected to compile. The compiler's own target triple
+# is the authoritative answer and is also the only one that stays correct
+# when the toolchain cross compiles, so try it first.
+set(PUNES_TRIPLE "")
+if(CMAKE_C_COMPILER_TARGET)
+	set(PUNES_TRIPLE "${CMAKE_C_COMPILER_TARGET}")
+elseif(CMAKE_C_COMPILER)
+	execute_process(COMMAND "${CMAKE_C_COMPILER}" -dumpmachine
+		OUTPUT_VARIABLE PUNES_TRIPLE
+		OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+endif()
+if(NOT PUNES_TRIPLE)
+	set(PUNES_TRIPLE "${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+string(TOLOWER "${PUNES_TRIPLE}" PUNES_TRIPLE_LC)
+string(REGEX MATCH "^(aarch64|arm64)" PUNES_ARM64 "${PUNES_TRIPLE_LC}")
+string(REGEX MATCH "^(x86_64|amd64)" PUNES_X86_64 "${PUNES_TRIPLE_LC}")
+if(PUNES_ARM64)
+	set(PUNES_ARCH "arm64")
+elseif(PUNES_X86_64)
+	set(PUNES_ARCH "x86_64")
 else()
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt::Core)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt::Network)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt::Widgets)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt::Svg)
-	set(QT_LIBS_USED ${QT_LIBS_USED} Qt::Gui)
-	if(${QT_VERSION} VERSION_GREATER_EQUAL "6.0.0")
-		set(QT_LIBS_USED ${QT_LIBS_USED} Qt::OpenGLWidgets)
-	endif()
+	set(PUNES_ARCH "${PUNES_TRIPLE}")
 endif()
+message(STATUS "Target arch: ${PUNES_ARCH} (${PUNES_TRIPLE})")
 
-if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-	set(WIN_LIBS_USED ${WIN_LIBS_USED} ws2_32)
-	set(WIN_LIBS_USED ${WIN_LIBS_USED} imm32)
-	set(WIN_LIBS_USED ${WIN_LIBS_USED} cg)
-	if(ENABLE_OPENGL)
-		if(ENABLE_OPENGL_CG)
-			set(WIN_LIBS_USED ${WIN_LIBS_USED} cgGL)
-		endif()
-	else()
-		set(WIN_LIBS_USED ${WIN_LIBS_USED} cgD3D9)
-		set(WIN_LIBS_USED ${WIN_LIBS_USED} d3d9)
-	endif()
-endif()
+set(WIN_LIBS_USED ${WIN_LIBS_USED} ws2_32)
+set(WIN_LIBS_USED ${WIN_LIBS_USED} imm32)
+# Modern XAudio2 (2.9) from the toolchain. XAudio2Create() is a plain
+# exported function of XAudio2_9.dll, so it works on x86_64 and on ARM64
+# alike. The old DirectX SDK header created the engine through a COM class
+# registration instead, which is unusable on Windows on ARM.
+set(WIN_LIBS_USED ${WIN_LIBS_USED} xaudio2_9)
+# CoCreateInstance for the MMDevice enumerator used to list audio outputs.
+set(WIN_LIBS_USED ${WIN_LIBS_USED} ole32)
 
 add_subdirectory(src)
 
-# Install misc files
-install(FILES misc/io.github.punesemu.puNES.desktop.in
-	DESTINATION ${CMAKE_INSTALL_DATADIR}/applications RENAME io.github.punesemu.puNES.desktop)
+if(ENABLE_TESTS)
+	enable_testing()
+	add_subdirectory(tests)
+endif()
 
-foreach(SIZE "16" "22" "24" "32" "48" "64" "256" "512")
-	install(FILES misc/hicolor_apps_${SIZE}x${SIZE}_io.github.punesemu.puNES.png
-		DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME io.github.punesemu.puNES.png)
-endforeach()
-
-install(FILES misc/io.github.punesemu.puNES.metainfo.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/metainfo)
+# Install data files. The .desktop entry, the hicolor icon set and the AppStream
+# metainfo were freedesktop packaging assets and went away with the other
+# non-Windows backends; the Windows icon lives in gui/windows/punes.ico and is
+# compiled into the executable through gui/windows/resources.rc.
 install(FILES misc/nes20db.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/puNES)
 install(FILES misc/dip.cfg DESTINATION ${CMAKE_INSTALL_DATADIR}/puNES)
 

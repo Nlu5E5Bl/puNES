@@ -33,9 +33,6 @@ enum shader_code_enum {
 	shc_ntsc_ntsc_pass1_composite_2phase,
 	shc_ntsc_ntsc_pass2_2phase,
 };
-enum lut_code_enum {
-	lut_none,
-};
 
 typedef struct _shader_code {
 	const char *code;
@@ -56,7 +53,4 @@ static const _shader_code shader_code[] = {
 #include "shaders/ntsc/ntsc-pass2-2phase.h"
 };
 
-static const _shader_code lut_resource[] = {
-	{ "" },
-};
 #endif /* SHDCODE_H_ */

@@ -31,10 +31,7 @@
 #include "audio/channels.h"
 #include "conf.h"
 #include "settings.h"
-#if defined (WITH_OPENGL)
 #include "opengl.h"
-#else
-#endif
 #include "gui.h"
 
 typedef struct _ffmpeg_stream {
@@ -181,9 +178,7 @@ void recording_init(void) {
 					}
 					if (rfi->recording_format == REC_FORMAT_VIDEO_MKV_HEVC) {
 						av_dict_set(&opts, "x265-params", "log-level=none", 0);
-#if defined (__WIN32__)
 						try_open = FALSE;
-#endif
 					}
 				} else {
 					test->sample_fmt = ffmpeg_audio_select_sample_fmt(avc);
@@ -270,13 +265,13 @@ void recording_start(uTCHAR *filename, int format) {
 
 	ret = avio_open(&ffmpeg.format_ctx->pb, ffmpeg.format_ctx->url, AVIO_FLAG_WRITE);
 	if (ret < 0) {
-		log_error(uL("recording;cannot open file, %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;cannot open file, " uPc("")), ffmpeg_av_make_error_string(ret));
 		goto recording_start_end;
 	}
 
 	ret = avformat_write_header(ffmpeg.format_ctx, NULL);
 	if (ret < 0) {
-		log_error(uL("recording;cannot write header file, %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;cannot write header file, " uPc("")), ffmpeg_av_make_error_string(ret));
 		goto recording_start_end;
 	}
 
@@ -311,7 +306,7 @@ void recording_finish(BYTE from_quit) {
 
 	ret = av_write_trailer(ffmpeg.format_ctx);
 	if (ret < 0) {
-		log_error(uL("recording;error on write trailer, %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;error on write trailer, " uPc("")), ffmpeg_av_make_error_string(ret));
 	}
 
 	if (ffmpeg.video.used) {
@@ -323,16 +318,12 @@ void recording_finish(BYTE from_quit) {
 
 	ret = avio_close(ffmpeg.format_ctx->pb);
 	if (ret < 0) {
-		log_error(uL("recording;error on close file, %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;error on close file, " uPc("")), ffmpeg_av_make_error_string(ret));
 	}
 
 	if (ffmpeg.format_ctx) {
 		if (ffmpeg.format_ctx->url) {
-#if defined (_WIN32)
 			free(ffmpeg.format_ctx->url);
-#else
-			av_free(ffmpeg.format_ctx->url);
-#endif
 		}
 		ffmpeg.format_ctx->url = NULL;
 		avformat_free_context(ffmpeg.format_ctx);
@@ -531,9 +522,9 @@ INLINE static BYTE ffmpeg_stream_write_frame(_ffmpeg_stream *fs) {
 		}
 		if (ret < 0) {
 			if (fs->avc->type == AVMEDIA_TYPE_VIDEO) {
-				log_error(uL("recording;error encoding video frame, %s"), ffmpeg_av_make_error_string(ret));
+				log_error(uL("recording;error encoding video frame, " uPc("")), ffmpeg_av_make_error_string(ret));
 			} else {
-				log_error(uL("recording;error encoding audio frame, %s"), ffmpeg_av_make_error_string(ret));
+				log_error(uL("recording;error encoding audio frame, " uPc("")), ffmpeg_av_make_error_string(ret));
 			}
 			rc = EXIT_ERROR;
 			break;
@@ -548,9 +539,9 @@ INLINE static BYTE ffmpeg_stream_write_frame(_ffmpeg_stream *fs) {
 
 		if (ret < 0) {
 			if (fs->avc->type == AVMEDIA_TYPE_VIDEO) {
-				log_error(uL("recording;error while writing video frame, %s"), ffmpeg_av_make_error_string(ret));
+				log_error(uL("recording;error while writing video frame, " uPc("")), ffmpeg_av_make_error_string(ret));
 			} else {
-				log_error(uL("recording;error while writing audio frame, %s"), ffmpeg_av_make_error_string(ret));
+				log_error(uL("recording;error while writing audio frame, " uPc("")), ffmpeg_av_make_error_string(ret));
 			}
 			rc = EXIT_ERROR;
 			break;
@@ -576,17 +567,7 @@ static BYTE ffmpeg_context_setup(_recording_format_info *rfi, enum AVPixelFormat
 	}
 
 	// memorizzo il nome del file di output
-#if defined (_WIN32)
 	ffmpeg.format_ctx->url = gui_dup_wchar_to_utf8(ffmpeg.filename);
-#else
-	{
-		size_t size = LENGTH_FILE_NAME_LONG * sizeof(uTCHAR);
-
-		ffmpeg.format_ctx->url = av_malloc(size);
-		memset(ffmpeg.format_ctx->url, 0x00, size);
-		ffmpeg.format_ctx->url = av_strdup(ffmpeg.filename);
-	}
-#endif
 
 	// configuro il contesto
 	ffmpeg.format_ctx->oformat = av_guess_format(rfi->format, NULL, NULL);
@@ -664,7 +645,7 @@ static BYTE ffmpeg_stream_open(_ffmpeg_stream *fs, AVDictionary *opts, BYTE crea
 	// apro il codec
 	ret = avcodec_open2(fs->avcc, fs->avc, &opts);
 	if (ret < 0) {
-		log_error(uL("recording;cannot open codec %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;cannot open codec " uPc("")), ffmpeg_av_make_error_string(ret));
 		return (EXIT_ERROR);
 	}
 
@@ -674,7 +655,7 @@ static BYTE ffmpeg_stream_open(_ffmpeg_stream *fs, AVDictionary *opts, BYTE crea
 
 	ret = avcodec_parameters_from_context(fs->avs->codecpar, fs->avcc);
 	if (ret < 0) {
-		log_error(uL("recording;%s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;" uPc("")), ffmpeg_av_make_error_string(ret));
 		return (EXIT_ERROR);
 	}
 
@@ -753,13 +734,8 @@ INLINE static BYTE ffmpeg_video_write_frame(int w, int h, int stride, uint8_t *r
 	int ret = 0;
 
 	if (rgb) {
-#if defined (WITH_OPENGL)
 		uint8_t *in_data[4] = { rgb + ((h - 1) * stride), 0, 0, 0 };
 		int in_linesize[4] = { -stride, 0, 0, 0 };
-#else
-		uint8_t *in_data[4] = { rgb, 0, 0, 0 };
-		int in_linesize[4] = { stride, 0, 0, 0 };
-#endif
 
 		video->sws = sws_getCachedContext(video->sws,
 			w, h, AV_PIX_FMT_BGRA,
@@ -777,7 +753,7 @@ INLINE static BYTE ffmpeg_video_write_frame(int w, int h, int stride, uint8_t *r
 
 	ret = avcodec_send_frame(video->avcc, frame);
 	if (ret < 0) {
-		log_error(uL("recording;error submitting a video frame for encoding, %s"), ffmpeg_av_make_error_string(ret));
+		log_error(uL("recording;error submitting a video frame for encoding, " uPc("")), ffmpeg_av_make_error_string(ret));
 		return (EXIT_ERROR);
 	}
 
@@ -1447,7 +1423,7 @@ INLINE static BYTE ffmpeg_audio_write_frame(SWORD *data) {
 
 		ret = avcodec_send_frame(audio->avcc, ret ? audio->avf : NULL);
 		if (ret < 0) {
-			log_error(uL("recording;error submitting a audio frame for encoding, %s"), ffmpeg_av_make_error_string(ret));
+			log_error(uL("recording;error submitting a audio frame for encoding, " uPc("")), ffmpeg_av_make_error_string(ret));
 			return (EXIT_ERROR);
 		}
 

@@ -214,13 +214,8 @@ BYTE rewind_init(void) {
 			(*last_dot) = 0x00;
 		}
 
-#if defined (__WIN32__)
 		usnprintf(rwint.file_name, usizeof(rwint.file_name), uL("" uPs("") uPs("") "_" uPs("") ".rwd"), gui_temp_folder(),
 			basename, emu_rand_str());
-#else
-		usnprintf(rwint.file_name, usizeof(rwint.file_name), uL("" uPs("") "/" uPs("") "_" uPs("") ".rwd"), gui_temp_folder(),
-			basename, emu_rand_str());
-#endif
 
 		rwint.file = ufopen(rwint.file_name, uL("w+b"));
 		if (!rwint.file) {

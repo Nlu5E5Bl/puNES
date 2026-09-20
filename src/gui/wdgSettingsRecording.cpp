@@ -23,7 +23,6 @@
 #include "conf.h"
 #include "settings.h"
 
-#if defined (WITH_FFMPEG)
 static const char *format_description[REC_FORMAT_TOTAL] = {
 //: Do not translate file extensions contained between parentheses [example: (*.mp3)]
 /* REC_FORMAT_VIDEO_MPG_MPEG1 */ QT_TRANSLATE_NOOP("wdgSettingsRecording", "MPEG 1 Video (*.mpg *.mpeg)"),
@@ -56,14 +55,12 @@ static const char *format_description[REC_FORMAT_TOTAL] = {
 //: Do not translate file extensions contained between parentheses [example: (*.mp3)]
 /* REC_FORMAT_AUDIO_OPUS      */ QT_TRANSLATE_NOOP("wdgSettingsRecording", "Opus Audio (*.opus)"),
 };
-#endif
 
 wdgSettingsRecording::wdgSettingsRecording(QWidget *parent) : QWidget(parent) {
 	setupUi(this);
 
 	setFocusProxy(comboBox_Output_Audio_Format);
 
-#if defined (WITH_FFMPEG)
 	output_format_init();
 
 	cfg->recording.output_custom_w = output_custom_control(cfg->recording.output_custom_w, 256, 2048, 512);
@@ -88,7 +85,6 @@ wdgSettingsRecording::wdgSettingsRecording(QWidget *parent) : QWidget(parent) {
 	connect(lineEdit_Output_Custom_Height, SIGNAL(editingFinished()), SLOT(s_output_custom_height()));
 	connect(checkBox_Use_emu_resolution, SIGNAL(stateChanged(int)), this, SLOT(s_use_emu_resolution(int)));
 	connect(checkBox_Follow_rotation, SIGNAL(stateChanged(int)), this, SLOT(s_follow_rotation(int)));
-#endif
 
 	{
 		int dim = fontMetrics().height();
@@ -105,7 +101,6 @@ wdgSettingsRecording::wdgSettingsRecording(QWidget *parent) : QWidget(parent) {
 }
 wdgSettingsRecording::~wdgSettingsRecording() = default;
 
-#if defined (WITH_FFMPEG)
 void wdgSettingsRecording::changeEvent(QEvent *event) {
 	if (event->type() == QEvent::LanguageChange) {
 		retranslateUi(this);
@@ -490,4 +485,3 @@ void wdgRecGetSaveFileName::s_output_video_format(int index) {
 void wdgRecGetSaveFileName::s_output_quality(int index) {
 	rec_cfg.quality = index;
 }
-#endif

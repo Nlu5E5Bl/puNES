@@ -127,9 +127,7 @@ typedef struct _info {
 	BYTE recording_is_a_video;
 	BYTE cpu_rw_extern;
 	BYTE screenshot;
-#if defined (WITH_OPENGL)
 	BYTE sRGB_FBO_in_use;
-#endif
 	_info_sh1sum sha1sum;
 	_info_lag_frame lag_frame;
 	BYTE r4016_dmc_double_read_disabled;
@@ -145,9 +143,7 @@ typedef struct _info {
 	BYTE disable_tick_hw;
 	BYTE start_with_hidden_gui;
 	BYTE block_recent_roms_update;
-#if defined (FULLSCREEN_RESFREQ)
 	BYTE old_machine_type;
-#endif
 	BYTE decimal_mode;
 	BYTE number_of_nes;
 	BYTE clean_input_data;

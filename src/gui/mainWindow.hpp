@@ -305,9 +305,7 @@ class mainWindow : public QMainWindow, public Ui::mainWindow {
 		void s_create_empty_disk(void);
 		void s_export_fds_image(void);
 		void s_start_stop_audio_recording(void);
-#if defined (WITH_FFMPEG)
 		void s_start_stop_video_recording(void);
-#endif
 		static void s_save_screenshot(void);
 		static void s_save_screenshot_1x(void);
 		void s_pause(void) const;
@@ -383,9 +381,9 @@ class wdgDlgMainWindow final : public wdgTitleBarDialog {
 	protected:
 #if defined (_WIN32)
 #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
-		bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result);
+		bool nativeEvent(const QByteArray &eventType, void *message, qintptr *result) override;
 #else
-		bool nativeEvent(const QByteArray &eventType, void *message, long *result);
+		bool nativeEvent(const QByteArray &eventType, void *message, long *result) override;
 #endif
 #endif
 		bool eventFilter(QObject *obj, QEvent *event) override;

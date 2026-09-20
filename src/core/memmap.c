@@ -1818,7 +1818,7 @@ void nvram_load_file(void) {
 				BYTE buffer[8];
 
 				if (fread(&buffer[0], 8, 1, fp) < 1) {
-					log_error(uL("mapper;error on read battery memory (%s)"), strerror(errno));
+					log_error(uL("mapper;error on read battery memory (" uPc("") ")"), strerror(errno));
 					fclose(fp);
 					return;
 				}
@@ -1838,7 +1838,7 @@ void nvram_load_file(void) {
 				if (wram_nvram_size() && wram_nvram_pnt()) {
 					// leggo il contenuto della nvram
 					if (fread(wram_nvram_pnt(), wram_nvram_size(), 1, fp) < 1) {
-						log_error(uL("mapper;error on read battery memory (%s)"), strerror(errno));
+						log_error(uL("mapper;error on read battery memory (" uPc("") ")"), strerror(errno));
 						fclose(fp);
 						return;
 					}
@@ -1847,7 +1847,7 @@ void nvram_load_file(void) {
 					if (vram_nvram_size(nesidx) && vram_nvram_pnt(nesidx)) {
 						// leggo il contenuto della nvram
 						if (fread(vram_nvram_pnt(nesidx), vram_nvram_size(nesidx), 1, fp) < 1) {
-							log_error(uL("mapper;error on read battery memory (%s)"), strerror(errno));
+							log_error(uL("mapper;error on read battery memory (" uPc("") ")"), strerror(errno));
 							fclose(fp);
 							return;
 						}
@@ -1880,14 +1880,14 @@ void nvram_save_file(void) {
 //			const BYTE buffer[8] = { 'F', 'H', 'p', 'u', 'N', 'E', 'S', 0x00 };
 //
 //			if (fwrite(&buffer[0], sizeof(buffer), 1, fp) < 1) {
-//				log_error(uL("mapper;error on write battery memory (%s)"), strerror(errno));
+//				log_error(uL("mapper;error on write battery memory (" uPc("") ")"), strerror(errno));
 //				fclose(fp);
 //				return;
 //			}
 			if (wram_nvram_size() && wram_nvram_pnt()) {
 				// scrivo il contenuto della nvram
 				if (fwrite(wram_nvram_pnt(), wram_nvram_size(), 1, fp) < 1) {
-					log_error(uL("mapper;error on write battery memory (%s)"), strerror(errno));
+					log_error(uL("mapper;error on write battery memory (" uPc("") ")"), strerror(errno));
 					fclose(fp);
 					return;
 				}
@@ -1896,7 +1896,7 @@ void nvram_save_file(void) {
 				if (vram_nvram_size(nesidx) && vram_nvram_pnt(nesidx)) {
 					// scrivo il contenuto della nvram
 					if (fwrite(vram_nvram_pnt(nesidx), vram_nvram_size(nesidx), 1, fp) < 1) {
-						log_error(uL("mapper;error on write battery memory (%s)"), strerror(errno));
+						log_error(uL("mapper;error on write battery memory (" uPc("") ")"), strerror(errno));
 						fclose(fp);
 						return;
 					}

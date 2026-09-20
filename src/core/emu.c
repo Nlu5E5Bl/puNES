@@ -46,9 +46,7 @@
 #include "nes20db.h"
 #include "video/effects/pause.h"
 #include "video/effects/tv_noise.h"
-#if defined (FULLSCREEN_RESFREQ)
 #include "video/gfx_monitor.h"
-#endif
 
 #define RS_SCALE (1.0f / (1.0f + (float)RAND_MAX))
 
@@ -68,9 +66,7 @@ void emu_quit(void) {
 		settings_save();
 	}
 
-#if defined (WITH_FFMPEG)
 	recording_quit();
-#endif
 
 	map_quit();
 
@@ -89,12 +85,10 @@ void emu_quit(void) {
 	uncompress_quit();
 	patcher_quit();
 
-#if defined (FULLSCREEN_RESFREQ)
 	if (gfx.type_of_fscreen_in_use == FULLSCR) {
 		gfx_monitor_restore_res();
 	}
 	gfx_monitor_quit();
-#endif
 
 	memmap_quit();
 
@@ -261,15 +255,9 @@ BYTE emu_make_dir(const uTCHAR *fmt, ...) {
 			return (EXIT_ERROR);
 		}
 	} else {
-#if defined (_WIN32)
 		if (_wmkdir(path)) {
 			return (EXIT_ERROR);
 		}
-#else
-		if (mkdir(path, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH)) {
-			return (EXIT_ERROR);
-		}
-#endif
 	}
 
 	return (EXIT_OK);
@@ -420,10 +408,8 @@ elaborate_rom_file:
 		info.no_rom = TRUE;
 	}
 
-#if defined (FULLSCREEN_RESFREQ)
 	// mi salvo la vecchia modalita'
 	info.old_machine_type = machine.type;
-#endif
 
 	// setto il tipo di sistema
 	switch (cfg->mode) {
@@ -539,9 +525,7 @@ BYTE emu_turn_on(void) {
 
 	cheatslist_init();
 
-#if defined (WITH_OPENGL)
 	gui_screen_info();
-#endif
 
 	if (gui_create() == EXIT_ERROR) {
 		gui_critical(uL("GUI initialization failed."));
@@ -725,13 +709,11 @@ BYTE emu_reset(BYTE type) {
 		gfx_set_screen(NO_CHANGE, NO_CHANGE, NO_CHANGE, NO_CHANGE, NO_CHANGE, TRUE, FALSE);
 	}
 
-#if defined (FULLSCREEN_RESFREQ)
 	if ((gfx.type_of_fscreen_in_use == FULLSCR) &&
 		cfg->adaptive_rrate &&
 		(info.old_machine_type != machine.type)) {
 		gfx_monitor_set_res(cfg->fullscreen_res_w, cfg->fullscreen_res_h, cfg->adaptive_rrate, TRUE);
 	}
-#endif
 
 	// APU
 	apu_turn_on();
@@ -985,9 +967,9 @@ void emu_info_rom(void) {
 	}
 
 #define ischanged(a) changed = (a); at_least_one_change = changed ? TRUE : at_least_one_change
-#define ifchanged() (changed ? " *" : "")
+#define ifchanged() (changed ? uL(" *") : uL(""))
 
-	log_info_box(uL("nes20db;%s"), info.mapper.nes20db.in_use ? "yes" : "no");
+	log_info_box(uL("nes20db;" uPc("")), info.mapper.nes20db.in_use ? "yes" : "no");
 
 	{
 		log_info_box_open(uL("console type;"));
@@ -1316,7 +1298,7 @@ void emu_info_rom(void) {
 		}
 	}
 
-#define ifsupported() (info.mapper.supported ? "" : " [not supported]")
+#define ifsupported() (info.mapper.supported ? uL("") : uL(" [not supported]"))
 
 	if (info.header.format == UNIF_FORMAT) {
 		char *trimmed = &unif.board[0];
@@ -1328,10 +1310,10 @@ void emu_info_rom(void) {
 			}
 			trimmed++;
 		}
-		log_info_box(uL("UNIF board;%s"), trimmed);
+		log_info_box(uL("UNIF board;" uPc("")), trimmed);
 
 		if (strlen(unif.name) > 0) {
-			log_info_box(uL("UNIF name;%s"), unif.name);
+			log_info_box(uL("UNIF name;" uPc("")), unif.name);
 		}
 
 		ischanged(info.header.mapper != info.mapper.id);
@@ -1357,10 +1339,10 @@ void emu_info_rom(void) {
 
 	if (info.header.format == UNIF_FORMAT) {
 		if (strlen(unif.dumped.by) > 0) {
-			log_info_box_open(uL("dumped by;%s"), unif.dumped.by);
+			log_info_box_open(uL("dumped by;" uPc("")), unif.dumped.by);
 
 			if (strlen(unif.dumped.with) > 0) {
-				log_append(uL(" with %s"), unif.dumped.with);
+				log_append(uL(" with " uPc("")), unif.dumped.with);
 			}
 
 			if (unif.dumped.month && unif.dumped.day && unif.dumped.year) {
@@ -1370,7 +1352,7 @@ void emu_info_rom(void) {
 					"September", "October",  "November", "December"
 				};
 
-				log_append(uL(" on %s %d, %d"), months[(unif.dumped.month - 1) % 12], unif.dumped.day, unif.dumped.year);
+				log_append(uL(" on " uPc("") " %d, %d"), months[(unif.dumped.month - 1) % 12], unif.dumped.day, unif.dumped.year);
 			}
 			log_close_box(uL(""));
 		}
@@ -1408,12 +1390,12 @@ void emu_info_rom(void) {
 	}
 
 	if (dipswitch.used) {
-		log_info_box(uL("dipswitch;%s"), "present");
+		log_info_box(uL("dipswitch;" uPc("")), "present");
 	}
 
 	ischanged(info.header.battery != info.mapper.battery);
 	if (changed || info.mapper.battery) {
-		log_info_box(uL("battery;%s%s"), (info.mapper.battery ? "present" : "not present"), ifchanged());
+		log_info_box(uL("battery;" uPc("") uPs("")), (info.mapper.battery ? "present" : "not present"), ifchanged());
 	}
 	if (wram_ram_size()) {
 		ischanged(info.header.prgram != wram_ram_size());

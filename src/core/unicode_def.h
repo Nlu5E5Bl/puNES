@@ -20,7 +20,6 @@
 #define UNICODE_DEF_H_
 
 // windows
-#if defined (_WIN32)
 #include <wchar.h>
 
 typedef wchar_t uTCHAR;
@@ -34,6 +33,12 @@ typedef wchar_t uTCHAR;
 #define ustring wstring
 
 #define uPs(a) "%" a "ls"
+// Plain char* argument inside a wide printf.  %hs is the C99 spelling for a
+// narrow string in a wide conversion and is the only one that works here:
+// this toolchain's swprintf follows MSVC/UCRT semantics, where both %s and %ls
+// consume a wchar_t*, so a char* fed to %s is misread as UTF-16 (each pair of
+// ASCII bytes becomes one code unit).
+#define uPc(a) "%" a "hs"
 #define uL(string) L##string
 #define uPTCHAR(string) (wchar_t *)string
 
@@ -72,56 +77,5 @@ typedef wchar_t uTCHAR;
 #define ustrdup _wcsdup
 #define usscanf swscanf_s
 #define ustrstr wcsstr
-
-// linux, bsd
-#else
-
-typedef char uTCHAR;
-
-#define ustructstat stat
-
-#define ustring string
-
-#define uPs(a) "%" a "s"
-#define uL(string) string
-#define uPTCHAR(string) (char *)string
-
-#define usizeof(string) sizeof(string)
-
-#define uQString QString::fromUtf8
-#define uQStringCD(string) uPTCHAR(string.toUtf8().constData())
-
-#define uQByteArrayFromString(string) string.toUtf8()
-#define uQByteArrayCD(string) uPTCHAR(string.constData())
-
-#define uvsnprintf vsnprintf
-#define umemset memset
-#define ustrcpy strcpy
-#define ustrncpy strncpy
-#define usnprintf snprintf
-#define uprintf printf
-#define ustrlen strlen
-#define uaccess access
-#define ustat stat
-#define ufprintf fprintf
-#define ufopen fopen
-#define ufdopen fdopen
-#define ustrrchr strrchr
-#define ustrcasecmp strcasecmp
-#define ustrcmp strcmp
-#define ustrncmp strncmp
-#define ustrcat strcat
-#define uremove remove
-#define uioctl ioctl
-#define uopen open
-#define uchdir chdir
-#define ugetcwd getcwd
-#define umemcpy memcpy
-#define ustrchr strchr
-#define ustrdup strdup
-#define usscanf sscanf
-#define ustrstr strstr
-
-#endif
 
 #endif /* UNICODE_DEF_H_ */

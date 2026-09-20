@@ -20,24 +20,6 @@
 #define THREAD_DEF_H_
 
 #include "common.h"
-#if defined (__unix__)
-#include <pthread.h>
-
-typedef pthread_t thread_t;
-#define thread_create(th, funct, par) pthread_create(&th, NULL, funct, par)
-#define thread_join(th) pthread_join(th, NULL)
-#define thread_free(th)
-
-typedef pthread_mutex_t thread_mutex_t;
-#define thread_mutex_init(mtx) pthread_mutex_init(&mtx, NULL)
-#define thread_mutex_init_error(mtx) thread_mutex_init(mtx) != 0
-#define thread_mutex_lock(mtx) pthread_mutex_lock(&mtx)
-#define thread_mutex_unlock(mtx) pthread_mutex_unlock(&mtx)
-#define thread_mutex_destroy(mtx) pthread_mutex_destroy(&mtx)
-
-#define thread_funct(funct, args) void *funct(args)
-#define thread_funct_return() return(NULL)
-#elif defined (_WIN32)
 #include "win.h"
 
 typedef HANDLE thread_t;
@@ -54,7 +36,6 @@ typedef HANDLE thread_mutex_t;
 
 #define thread_funct(funct, args) DWORD WINAPI funct(args)
 #define thread_funct_return() return (0)
-#endif
 
 enum thread_states {
 	TH_UNINITIALIZED,

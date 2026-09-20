@@ -54,9 +54,6 @@ dlgSettings::dlgSettings(QWidget *parent) : QWidget(parent) {
 
 	widget_Settings_Cheats->widget_Cheats_Editor->pushButton_Hide_Show_Tools->setVisible(false);
 
-#if !defined (WITH_FFMPEG)
-	tabWidget_Settings->removeTab(6);
-#endif
 
 	installEventFilter(this);
 }
@@ -140,9 +137,7 @@ void dlgSettings::update_tab_audio(void) const {
 	widget_Settings_Audio->update_widget();
 }
 void dlgSettings::update_tab_recording(void) const {
-#if defined (WITH_FFMPEG)
 	widget_Settings_Recording->update_widget();
-#endif
 }
 
 void dlgSettings::s_save_settings(UNUSED(bool checked)) {

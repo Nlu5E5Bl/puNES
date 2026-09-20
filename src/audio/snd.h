@@ -61,11 +61,7 @@ typedef struct _snd {
 	int32_t pause_calls;
 
 	struct _period {
-#if defined (_WIN32)
 		uint32_t samples;
-#else
-		int32_t samples;
-#endif
 		uint32_t size;
 	} period;
 

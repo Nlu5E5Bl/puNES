@@ -22,11 +22,6 @@
 #include "nes.h"
 #include "gui.h"
 
-#define READINT24(x) ((x)[0] << 16 | (x)[1] << 8 | (x)[2])
-#define WRITEINT24(x, i)\
-	x[0] = i >> 16;\
-	x[1] = (i >> 8) & 0xff;\
-	x[2] = i & 0xff
 #define X3(a) (((a) << 1) + (a))
 #define SCALE2X()\
 	if (B != H && D != F) {\

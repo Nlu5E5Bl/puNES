@@ -25,9 +25,7 @@
 #include "clock.h"
 #include "shaders.h"
 #include "settings.h"
-#if defined (FULLSCREEN_RESFREQ)
 #include "video/gfx_monitor.h"
-#endif
 
 enum wdgSettingsVideo_shader_parameter_colums {
 	WSV_SP_DESC,
@@ -159,9 +157,7 @@ wdgSettingsVideo::wdgSettingsVideo(QWidget *parent) : QWidget(parent) {
 
 		connect(pushButton_Shader_Parameters_reset_alls, SIGNAL(clicked(bool)), this, SLOT(s_shader_param_all_defaults(bool)));
 	}
-#if defined (WITH_OPENGL)
 	connect(checkBox_Disable_sRGB_FBO, SIGNAL(clicked(bool)), this, SLOT(s_disable_srgb_fbo(bool)));
-#endif
 
 	connect(comboBox_Palette, SIGNAL(activated(int)), this, SLOT(s_palette(int)));
 	connect(pushButton_Palette_file, SIGNAL(clicked(bool)), this, SLOT(s_palette_file(bool)));
@@ -180,26 +176,19 @@ wdgSettingsVideo::wdgSettingsVideo(QWidget *parent) : QWidget(parent) {
 	connect(checkBox_Use_integer_scaling_in_fullscreen, SIGNAL(clicked(bool)), this, SLOT(s_integer_in_fullscreen(bool)));
 	connect(checkBox_Stretch_in_fullscreen, SIGNAL(clicked(bool)), this, SLOT(s_stretch_in_fullscreen(bool)));
 
-	{
-		bool visible = false;
-
-#if defined (FULLSCREEN_RESFREQ)
-		if (!gfx.wayland.enabled) {
-			visible = true;
-			gfx_monitor_enum_monitors();
-			connect(checkBox_Fullscreen_adaptive_rrate, SIGNAL(clicked(bool)), this, SLOT(s_adaptive_rrate(bool)));
-			connect(comboBox_Fullscreen_resolution, SIGNAL(activated(int)), this, SLOT(s_resolution(int)));
-		}
-#endif
-		icon_Fullscreen_resolution->setVisible(visible);
-		label_Fullscreen_resolution->setVisible(visible);
-		comboBox_Fullscreen_resolution->setVisible(visible);
-		label_Fullscreen_resolution_note_asterisk->setVisible(visible);
-		checkBox_Fullscreen_adaptive_rrate->setVisible(visible);
-		label_Fullscreen_adaptive_rrate_note_asterisk->setVisible(visible);
-		label_Fullscreen_resolution_note->setVisible(visible);
-		checkBox_Fullscreen_in_window->setVisible(!gfx.only_fullscreen_in_window);
-	}
+	// Le voci di risoluzione/refresh del fullscreen sono sempre disponibili: il
+	// backend che le realizza (gui/windows/monitor.c) esiste solo su Windows e
+	// questa e' l'unica piattaforma supportata.
+	gfx_monitor_enum_monitors();
+	connect(checkBox_Fullscreen_adaptive_rrate, SIGNAL(clicked(bool)), this, SLOT(s_adaptive_rrate(bool)));
+	connect(comboBox_Fullscreen_resolution, SIGNAL(activated(int)), this, SLOT(s_resolution(int)));
+	icon_Fullscreen_resolution->setVisible(true);
+	label_Fullscreen_resolution->setVisible(true);
+	comboBox_Fullscreen_resolution->setVisible(true);
+	label_Fullscreen_resolution_note_asterisk->setVisible(true);
+	checkBox_Fullscreen_adaptive_rrate->setVisible(true);
+	label_Fullscreen_adaptive_rrate_note_asterisk->setVisible(true);
+	label_Fullscreen_resolution_note->setVisible(true);
 
 	tabWidget_Video->setCurrentIndex(0);
 
@@ -230,9 +219,7 @@ wdgSettingsVideo::wdgSettingsVideo(QWidget *parent) : QWidget(parent) {
 		icon_Palette_editor->setPixmap(QIcon(":/icon/icons/color_picker.svgz").pixmap(dim, dim));
 		icon_Palette_misc->setPixmap(QIcon(":/icon/icons/misc.svgz").pixmap(dim, dim));
 		icon_Fullscreen->setPixmap(QIcon(":/icon/icons/fullscreen.svgz").pixmap(dim, dim));
-#if defined (FULLSCREEN_RESFREQ)
 		icon_Fullscreen_resolution->setPixmap(QIcon(":/icon/icons/resolution.svgz").pixmap(dim, dim));
-#endif
 	}
 }
 wdgSettingsVideo::~wdgSettingsVideo() = default;
@@ -273,11 +260,7 @@ void wdgSettingsVideo::update_widget(void) {
 	}
 
 	{
-#if defined (WITH_OPENGL)
 		checkBox_PAR_Soft_Stretch->setText(tr("GLSL &soft stretch"));
-#elif defined (WITH_D3D9)
-		checkBox_PAR_Soft_Stretch->setText(tr("HLSL &soft stretch"));
-#endif
 		par_set();
 
 		if (cfg->PAR_soft_stretch) {
@@ -311,14 +294,7 @@ void wdgSettingsVideo::update_widget(void) {
 		widget_PAL_LMP88959_Filter->update_widget();
 		widget_PAL_NESRGB_LMP88959_Filter->update_widget();
 		shader_set();
-#if defined (WITH_OPENGL)
 		checkBox_Disable_sRGB_FBO->setChecked(cfg->disable_srgb_fbo);
-#else
-		icon_Filters_misc->setVisible(false);
-		label_Filters_misc->setVisible(false);
-		line_Filters_misc->setVisible(false);
-		checkBox_Disable_sRGB_FBO->setVisible(false);
-#endif
 	}
 
 	{
@@ -344,13 +320,9 @@ void wdgSettingsVideo::update_widget(void) {
 	checkBox_Use_integer_scaling_in_fullscreen->setChecked(cfg->integer_scaling);
 	checkBox_Stretch_in_fullscreen->setChecked(cfg->stretch);
 	checkBox_Stretch_in_fullscreen->setEnabled(!cfg->integer_scaling);
-#if defined (FULLSCREEN_RESFREQ)
-	if (!gfx.wayland.enabled) {
-		checkBox_Fullscreen_adaptive_rrate->setEnabled(!checkBox_Fullscreen_in_window->isChecked());
-		checkBox_Fullscreen_adaptive_rrate->setChecked(cfg->adaptive_rrate);
-		resolution_set();
-	}
-#endif
+	checkBox_Fullscreen_adaptive_rrate->setEnabled(!checkBox_Fullscreen_in_window->isChecked());
+	checkBox_Fullscreen_adaptive_rrate->setChecked(cfg->adaptive_rrate);
+	resolution_set();
 }
 void wdgSettingsVideo::change_rom(void) {
 	update_widget();
@@ -812,7 +784,6 @@ void wdgSettingsVideo::palette_set(void) {
 
 	comboBox_Palette->setCurrentIndex(palette);
 }
-#if defined (FULLSCREEN_RESFREQ)
 void wdgSettingsVideo::resolution_set(void) {
 	bool finded = false;
 	int i;
@@ -835,7 +806,6 @@ void wdgSettingsVideo::resolution_set(void) {
 		comboBox_Fullscreen_resolution->setCurrentIndex(0);
 	}
 }
-#endif
 bool wdgSettingsVideo::call_gfx_set_screen(int mtype) {
 	if (mtype == 0) {
 		if (machine.type == NTSC) {
@@ -1134,7 +1104,6 @@ void wdgSettingsVideo::s_shader(int index) {
 	shader_param_set();
 	emu_thread_continue();
 }
-#if defined (WITH_OPENGL)
 void wdgSettingsVideo::s_disable_srgb_fbo(UNUSED(bool checked)) {
 	emu_thread_pause();
 	cfg->disable_srgb_fbo = !cfg->disable_srgb_fbo;
@@ -1143,7 +1112,6 @@ void wdgSettingsVideo::s_disable_srgb_fbo(UNUSED(bool checked)) {
 	}
 	emu_thread_continue();
 }
-#endif
 void wdgSettingsVideo::s_shader_file(UNUSED(bool checked)) {
 	QStringList filters;
 	QString file;
@@ -1153,13 +1121,7 @@ void wdgSettingsVideo::s_shader_file(UNUSED(bool checked)) {
 	filters.append(tr("Shaders files"));
 	filters.append(tr("All files"));
 
-#if defined (WITH_OPENGL_CG)
-	filters[0].append(" (*.cgp *.glslp)");
-#elif defined (WITH_OPENGL)
 	filters[0].append(" (*.glslp)");
-#elif defined (WITH_D3D9)
-	filters[0].append(" (*.cgp)");
-#endif
 	filters[1].append(" (*.*)");
 
 	file = QFileDialog::getOpenFileName(this, tr("Open Shader file"),
@@ -1376,7 +1338,6 @@ void wdgSettingsVideo::s_stretch_in_fullscreen(UNUSED(bool checked)) {
 	}
 	emu_thread_continue();
 }
-#if defined (FULLSCREEN_RESFREQ)
 void wdgSettingsVideo::s_adaptive_rrate(UNUSED(bool checked)) {
 	cfg->adaptive_rrate = !cfg->adaptive_rrate;
 	update_widget();
@@ -1390,7 +1351,6 @@ void wdgSettingsVideo::s_resolution(int index) {
 		settings_resolution_val_to_int(&cfg->fullscreen_res_w, &cfg->fullscreen_res_h, uQStringCD(res));
 	}
 }
-#endif
 void wdgSettingsVideo::s_screen_rotation(bool checked) {
 	if (checked) {
 		int rotation = QVariant(((themePushButton *)sender())->property("mtype")).toInt();

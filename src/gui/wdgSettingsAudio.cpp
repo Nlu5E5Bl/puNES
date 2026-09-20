@@ -28,13 +28,7 @@ wdgSettingsAudio::wdgSettingsAudio(QWidget *parent) : QWidget(parent) {
 
 	setFocusProxy(comboBox_Output_Devices);
 
-#if defined (__OpenBSD__) || defined (__FreeBSD__)
-	icon_Output_Devices->setVisible(false);
-	label_Output_Devices->setVisible(false);
-	comboBox_Output_Devices->setVisible(false);
-#else
 	connect(comboBox_Output_Devices, SIGNAL(activated(int)), this, SLOT(s_output_devices(int)));
-#endif
 
 	pushButton_Samplarate_192000->setProperty("mtype", QVariant(S192000));
 	pushButton_Samplarate_96000->setProperty("mtype", QVariant(S96000));

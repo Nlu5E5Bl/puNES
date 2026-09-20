@@ -113,8 +113,8 @@ void input_rd_standard_controller_vs(BYTE nidx, BYTE *value, BYTE nport, BYTE sh
 	} else if (info.mapper.expansion == EXP_VS_1P_R4017) {
 		np ^= 0x01;
 	}
-	input_updown_leftright_standard_controller(index, nport);
-	(*value) = (protection ? PRESSED : !!port[nport].data.treated[index]) << shift;
+	input_updown_leftright_standard_controller(index, np);
+	(*value) = (protection ? PRESSED : !!port[np].data.treated[index]) << shift;
 	// Se $4016 e' a 1 leggo solo lo stato del primo pulsante
 	// del controller. Quando verra' scritto 0 nel $4016
 	// riprendero' a leggere lo stato di tutti i pulsanti.

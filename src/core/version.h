@@ -44,25 +44,25 @@
 #define COPYRANSI   "(C)" COPYRIGTH
 #define COPYRUTF8   "&#169;" COPYRIGTH
 
-#if defined (WITH_OPENGL)
 #define VERTYPE     "OpenGL"
-#elif defined (WITH_D3D9)
-#define VERTYPE     "D3D9"
-#endif
 
-#if defined (_WIN32) || defined (_WIN64)
-#if defined (_WIN64)
+/*
+ * Target architecture, shown in the about box and in the log header.
+ * The x86 and the ARM branches are kept side by side on purpose: the same
+ * source has to compile for both toolchains.  On Windows _WIN64 is defined
+ * for x86_64 and for aarch64 alike, so the CPU macros below are used instead
+ * of the generic Windows ones.
+ */
+#if defined (__aarch64__) || defined (_M_ARM64) || defined (_M_ARM64EC)
+#define ENVIRONMENT "arm64"
+#elif defined (__arm__) || defined (_M_ARM) || defined (__thumb__)
+#define ENVIRONMENT "arm"
+#elif defined (__x86_64__) || defined (_M_X64) || defined (_M_AMD64)
 #define ENVIRONMENT "x86_64"
-#else
+#elif defined (__i386__) || defined (_M_IX86)
 #define ENVIRONMENT "x86"
-#endif
-#endif
-#if defined (__GNUC__)
-#if defined (__x86_64__)
-#define ENVIRONMENT "x86_64"
 #else
-#define ENVIRONMENT "x86"
-#endif
+#define ENVIRONMENT "unknown"
 #endif
 
 #endif /* VERSION_H_ */

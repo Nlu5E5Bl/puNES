@@ -30,12 +30,8 @@
 #include "patcher.h"
 #include "mappers.h"
 #include "tape_data_recorder.h"
-#if defined (WITH_FFMPEG)
 #include "recording.h"
-#endif
-#if defined (FULLSCREEN_RESFREQ)
 #include "video/gfx_monitor.h"
-#endif
 
 #if defined (_WIN32)
 int WINAPI WinMain(UNUSED(HINSTANCE hInstance), UNUSED(HINSTANCE hPrevInstance), UNUSED(PSTR szCmdLine), UNUSED(int iCmdShow)) {
@@ -101,9 +97,7 @@ int main(int argc, char **argv) {
 	netplay_init();
 #endif
 
-#if defined (FULLSCREEN_RESFREQ)
 	gfx_monitor_init();
-#endif
 
 	recent_roms_init();
 	recent_roms_parse();
@@ -111,9 +105,7 @@ int main(int argc, char **argv) {
 	recent_disks_init();
 	recent_disks_parse();
 
-#if defined (WITH_FFMPEG)
 	recording_init();
-#endif
 
 	uncompress_init();
 

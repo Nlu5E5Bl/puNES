@@ -180,28 +180,20 @@ void recStatusBar::closeEvent(QCloseEvent *event) {
 }
 void recStatusBar::mousePressEvent(QMouseEvent *event) {
 	if (event->button() == Qt::LeftButton) {
-#if defined (WITH_FFMPEG)
 		if (desc->text() == tr("Audio")) {
 			mainwin->wd->action_Start_Stop_Audio_recording->trigger();
 		} else {
 			mainwin->wd->action_Start_Stop_Video_recording->trigger();
 		}
-#else
-		mainwin->action_Start_Stop_Audio_recording->trigger();
-#endif
 	}
 }
 
 void recStatusBar::desc_text(void) const {
-#if defined (WITH_FFMPEG)
 	if (cfg->recording.last_type == REC_FORMAT_AUDIO) {
 		desc->setText(tr("Audio"));
 	} else {
 		desc->setText(tr("Video"));
 	}
-#else
-	desc->setText(tr("Audio"));
-#endif
 	if (info.recording_on_air) {
 		desc->setEnabled(true);
 	} else {
@@ -241,9 +233,7 @@ void recStatusBar::s_context_menu(const QPoint &pos) const {
 	QMenu menu;
 
 	menu.addAction(mainwin->wd->action_Start_Stop_Audio_recording);
-#if defined (WITH_FFMPEG)
 	menu.addAction(mainwin->wd->action_Start_Stop_Video_recording);
-#endif
 	menu.exec(global_pos);
 }
 

@@ -3,6 +3,14 @@
 </p>
 <h3 align="center">Qt-based Nintendo Entertainment System emulator and NSF/NSF2/NSFe Music Player</h3>
 
+> **This project is a successor maintenance fork of puNES, maintained primarily by
+> [deepseek-ai](https://github.com/deepseek-ai).** It tracks the same emulator
+> core but moves the build to a modern, fully 64-bit toolchain: MSYS2
+> CLANG64/CLANGARM64 with Qt6 and FFmpeg from pacman, OpenGL as the only
+> renderer, and Windows on ARM64 as a first class target alongside x86_64. The
+> ancient Cg runtime and the whole Direct3D path are gone, and so are the Linux,
+> FreeBSD and OpenBSD backends.
+
 <p align="center">
   <a href="https://github.com/punesemu/puNES/releases/latest">
     <img src="https://img.shields.io/github/release/punesemu/puNES.svg?label=latest%20release" alt="GitHub release"/>
@@ -29,19 +37,19 @@
   </a>
 </p>
 
-## :floppy_disk: Work in Progress (WIP) Builds [![Build status](https://github.com/punesemu/puNES/actions/workflows/build.yml/badge.svg)](https://github.com/punesemu/puNES/actions)
+## :floppy_disk: Downloads
 
-These executables are always updated to the latest commit:
+Windows packages are produced by [`build.sh`](build.sh) for the two supported
+toolchains:
 
-- Linux AppImage : :link:[`x86_64`](https://nightly.link/punesemu/puNES/workflows/build/master/puNES-x86_64.AppImage.zip)
-- Windows 32 bit : :link:[`OpenGL`](https://nightly.link/punesemu/puNES/workflows/build/master/punes32.wip.opengl.zip) - :link:[`D3D9`](https://nightly.link/punesemu/puNES/workflows/build/master/punes32.wip.d3d9.zip)
-- Windows 64 bit : :link:[`OpenGL`](https://nightly.link/punesemu/puNES/workflows/build/master/punes64.wip.opengl.zip) - :link:[`D3D9`](https://nightly.link/punesemu/puNES/workflows/build/master/punes64.wip.d3d9.zip)
+- Windows x86_64 : MSYS2 **CLANG64** (`mingw-w64-clang-x86_64-*`)
+- Windows ARM64 : MSYS2 **CLANGARM64** (`mingw-w64-clang-aarch64-*`)
 
 Notes:
 
 - WARNING save states of version 0.110 or earlier are no longer compatible.
-- Due to the many changes I'm making to the core of the emulator, new bugs may have been introduced, if you find that the roms no longer work properly compared to version 0.110, please let me know.
-- 32 bit versions are Windows XP compatible.
+- 32 bit builds, the Cg renderer and the Direct3D renderer are not supported any
+  more; neither are Linux, FreeBSD and OpenBSD.
 
 ## :beer: Support
 
@@ -326,204 +334,38 @@ To see a list of available command-line options, start puNES with the `-h` argum
 
 ## :information_source: How to Compile
 
-- :penguin: [Linux](#penguin-linux)
-- :smiling_imp: [FreeBSD](#smiling_imp-freebsd)
-- :blowfish: [OpenBSD](#blowfish-openbsd)
 - :computer: [Windows](#computer-windows)
 
 ## CMake Options
 
-| CMake Option              | Description                                                                        | Default |
-|---------------------------|------------------------------------------------------------------------------------| ------- |
-| ENABLE_RELEASE            | Build release version                                                              | ON      |
-| ENABLE_FFMPEG             | Enable FFMPEG support                                                              | ON      |
-| ENABLE_OPENGL             | Use OpenGL support instead of Direct3D 9 (only for Windows)                        | ON      |
-| ENABLE_OPENGL_CG          | Enable OpenGL nVidia Cg Toolkit support                                            | OFF     |
-| ENABLE_FULLSCREEN_RESFREQ | Enable Fullscreen resolution and auto frequency                                    | ON      |
-| ENABLE_QT5_LIBS           | Force use of QT5 libraries                                                         | OFF     |
-| DISABLE_PORTABLE_MODE     | Disable portable mode handling (useful with sandbox<br/>environments like Flatpak) | OFF     |
+| CMake Option          | Description                                       | Default |
+|-----------------------|---------------------------------------------------| ------- |
+| ENABLE_RELEASE        | Build release version                             | ON      |
+| ENABLE_GIT_INFO       | Include the Git revision in the version string    | OFF     |
+| DISABLE_PORTABLE_MODE | Disable portable mode handling                    | OFF     |
+| ENABLE_TESTS          | Build the unit test harness in `tests/`           | OFF     |
 
-## :penguin: Linux
+FFmpeg, the fullscreen resolution/frequency support and the OpenGL renderer are
+not optional any more, so they have no CMake option: Qt6 and the FFmpeg
+libraries are located with `find_package`/`pkg-config` and the build fails with a
+clear message if they are missing. Qt5 is not supported.
 
-<details>
-<summary>Expand</summary>
+Release builds (`ENABLE_RELEASE=ON`) are compiled with aggressive optimisation flags:
 
-#### Dependencies
+| Flag                                        | Purpose                                                    |
+|---------------------------------------------|------------------------------------------------------------|
+| `-O3`                                       | maximum optimisation level                                  |
+| `-pipe`                                     | use pipes instead of temporary files                        |
+| `-flto=auto`                                | link time optimisation                                      |
+| `-fdata-sections -ffunction-sections`       | one section per symbol                                      |
+| `-Wl,--gc-sections`                         | let the linker drop unreferenced code and data              |
+| `-Wl,--strip-all`                           | strip every symbol from the executable                      |
 
-- [CMake >= 3.14](https://cmake.org) ([Ninja](https://ninja-build.org) build system is optional)
-- [Qt5](https://www.qt.io) or [Qt6](https://www.qt.io) with OpenGL support (qtcore, qtgui, qtwidgets, qtnetwork, qtsvg and qttools)
-- [nvidia-cg](https://developer.nvidia.com/cg-toolkit)
-- [alsa](https://www.alsa-project.org)
-- libudev
-- [libX11 and libXrandr](https://www.x.org)
-- [p7zip](https://github.com/p7zip-project/p7zip) for compressed file support (lib7zip uses the 7z.so library on unix-like systems)
-- (optional) [ffmpeg libraries >= 4.0](https://ffmpeg.org) if you want video and audio recording support (libavcodec, libavformat, libavutil, libswresample and libswscale). See [notes](#movie_camera-ffmpeg).
-
-#### Compilation of puNES
-
-```bash
-git clone https://github.com/punesemu/puNES
-cd puNES
-cmake -B build -G Ninja -DENABLE_FFMPEG:BOOL=ON -DENABLE_OPENGL_CG:BOOL=ON
-cmake --build build -j2
-```
-
-if you don't want to use the Ninja build system and prefer the classic Makefile:
-
-```bash
-cmake -B build -DENABLE_FFMPEG:BOOL=ON -DENABLE_OPENGL_CG:BOOL=ON
-make -j2
-```
-
-the executable `punes` is in the `build/src` directory.
-
-#### Linux Debug version
-
-If you need the debug version then you need to replace the `cmake -B build -G Ninja` command of the previous examples with the following:
-
-```bash
-cmake -B build -G Ninja -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOL=OFF [...]
-cmake --build build -j2
-```
-
-or if you prefer the classic Makefile:
-
-```bash
-cmake -B build -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOL=OFF [...]
-make -j2
-```
-
-where `[...]` are the other necessary options.
-
-#### Example on how to compile on Ubuntu 24.04
-
-```bash
-sudo apt-get install -y git cmake ninja-build libtool build-essential pkg-config mesa-common-dev freeglut3-dev
-sudo apt-get install -y nvidia-cg-toolkit libx11-dev libxrandr-dev libxcb-cursor-dev libasound2-dev libudev-dev
-sudo apt-get install -y libglvnd-dev libavformat-dev libavcodec-dev libswresample-dev libswscale-dev libavutil-dev libqt6svg6-dev
-sudo apt-get install -y qt6-base-dev qt6-base-dev-tools qt6-tools-dev qt6-tools-dev-tools qt6-l10n-tools qt6-image-formats-plugins
-git clone https://github.com/punesemu/puNES
-cd puNES
-cmake -B build -G Ninja
-cmake --build build -j2
-```
-
-to start the emulator
-
-```bash
-./build/src/punes
-```
-
-P.S. To work correctly under wayland you need to have QT6 updated to at least 6.8 while 24.04 uses 6.4. I recommend using the AppImage :link:[`x86_64`](https://nightly.link/punesemu/puNES/workflows/build/master/puNES-x86_64.AppImage.zip) which uses 6.9.1. If you are curious to know how I compile the AppImage consult the :link:[`.github/workflows/build.yml`](https://github.com/punesemu/puNES/blob/master/.github/workflows/build.yml).
-
-</details>
-
-## :smiling_imp: FreeBSD
-
-<details>
-<summary>Expand</summary>
-
-#### Dependencies
-
-- [CMake >= 3.14](https://cmake.org) ([Ninja](https://ninja-build.org) build system is optional)
-- [Qt5](https://www.qt.io) or [Qt6](https://www.qt.io) with OpenGL support (qtcore, qtgui, qtwidgets, qtnetwork, qtsvg and qttools)
-- [sndio](http://www.sndio.org)
-- [libX11 and libXrandr](https://www.x.org)
-- [p7zip](https://github.com/p7zip-project/p7zip) for compressed file support (lib7zip uses the 7z.so library on unix-like systems)
-- (optional) [ffmpeg libraries >= 4.0](https://ffmpeg.org) if you want video and audio recording support (libavcodec, libavformat, libavutil, libswresample and libswscale). See [notes](#movie_camera-ffmpeg).
-
-#### Compilation of puNES
-
-```bash
-sudo pkg install -y devel/cmake devel/ninja devel/pkgconf devel/git multimedia/ffmpeg audio/sndio devel/qt5-qmake
-sudo pkg install -y devel/qt5-buildtools devel/qt5-core x11-toolkits/qt5-gui x11-toolkits/qt5-widgets graphics/qt5-svg
-sudo pkg install -y devel/qt5-linguisttools
-git clone https://github.com/punesemu/puNES
-cd puNES
-cmake -B build -G Ninja -DQt5_DIR=/usr/local/lib/qt5/cmake/Qt5 -DENABLE_FFMPEG:BOOL=ON
-cmake --build build -j2
-```
-
-if you don't want to use the Ninja build system and prefer the classic Makefile:
-
-```bash
-cmake -B build -DQt5_DIR=/usr/local/lib/qt5/cmake/Qt5 -DENABLE_FFMPEG:BOOL=ON
-make -j2
-```
-
-the executable `punes` is in the `build/src` directory.
-
-#### FreeBSD Debug version
-
-If you need the debug version then you need to replace the `cmake -B Build -G Ninja` command of the previous examples with the following:
-
-```bash
-cmake -B build -G Ninja -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOOL=OFF [...]
-cmake --build build -j2
-```
-
-or if you prefer the classic Makefile:
-
-```bash
-cmake -B build -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOOL=OFF [...]
-make -j2
-```
-
-where `[...]` are the other necessary options.
-
-</details>
-
-## :blowfish: OpenBSD
-
-<details>
-<summary>Expand</summary>
-
-#### Dependencies
-
-- [CMake >= 3.14](https://cmake.org) ([Ninja](https://ninja-build.org) build system is optional)
-- [Qt5](https://www.qt.io) or [Qt6](https://www.qt.io) with OpenGL support (qtcore, qtgui, qtwidgets, qtnetwork, qtsvg and qttools)
-- [sndio](http://www.sndio.org)
-- [libX11 and libXrandr](https://www.x.org)
-- [p7zip](https://github.com/p7zip-project/p7zip) for compressed file support (lib7zip uses the 7z.so library on unix-like systems)
-- (optional) [ffmpeg libraries >= 4.0](https://ffmpeg.org) if you want video and audio recording support (libavcodec, libavformat, libavutil, libswresample and libswscale). See [notes](#movie_camera-ffmpeg)
-
-#### Compilation of puNES
-
-```bash
-git clone https://github.com/punesemu/puNES
-cd puNES
-cmake -B build -G Ninja -DQt5_DIR=/usr/local/lib/qt5/cmake/Qt5 -DENABLE_FFMPEG:BOOL=ON
-cmake --build build -j2
-```
-
-if you don't want to use the Ninja build system and prefer the classic Makefile:
-
-```bash
-cmake -B build -DQt5_DIR=/usr/local/lib/qt5/cmake/Qt5 -DENABLE_FFMPEG:BOOL=ON
-make -j2
-```
-
-the executable `punes` is in the `buid/src` directory.
-
-#### OpenBSD Debug version
-
-If you need the debug version then you need to replace the `cmake -B Build -G Ninja` command of the previous examples with the following:
-
-```bash
-cmake -B build -G Ninja -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOOL=OFF [...]
-cmake --build build -j2
-```
-
-or if you prefer the classic Makefile:
-
-```bash
-cmake -B build -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOOL=OFF [...]
-make -j2
-```
-
-where `[...]` are the other necessary options.
-
-</details>
+`-march=native` is deliberately *not* used, so the release binaries stay portable.
+`-ffast-math` is not part of this set either: it changes the floating point
+semantics the audio resampling path depends on, so `src/CMakeLists.txt` re-stamps
+the vendored subprojects with this flag set to make sure none of them can
+introduce it behind our back.
 
 ## :computer: Windows
 
@@ -532,136 +374,96 @@ where `[...]` are the other necessary options.
 
 #### Dependencies
 
-- [Qt5](https://www.qt.io) with OpenGL support (5.6.3 is the last if you want the support for Windows XP)
+- [MSYS2](https://www.msys2.org), **CLANG64** on x86_64 and **CLANGARM64** on
+  ARM64. Those two are the supported toolchains; UCRT64 and MINGW64 are rejected
+  by the build script.
+- [Qt6](https://www.qt.io) with OpenGL support (`qt6-base`, `qt6-svg`; modules
+  qtcore, qtgui, qtwidgets, qtnetwork, qtsvg, qtopenglwidgets, plus `qt6-tools`
+  for `windeployqt`)
+- [FFmpeg](https://ffmpeg.org) libraries >= 4.0 (libavcodec, libavformat,
+  libavutil, libswresample and libswscale) - see [notes](#movie_camera-ffmpeg)
+- [ntldd](https://github.com/LRN/ntldd) for the packaging step
+- [CMake >= 3.15](https://cmake.org) and [Ninja](https://ninja-build.org)
 
-#### Development Environment installation
+#### One click build
 
-1. install [MSYS2](https://www.msys2.org/)
-2. open "MSYS2 MinGW 64-bit" shell (or 32 bit if you want compile the 32 bit version of puNES)
-
-```bash
-pacman -Syu
-```
-
-3. close the MSYS2 window and run it again from Start menu
-
-```bash
-pacman -Su
-pacman -S base-devel git wget p7zip unzip mingw-w64-i686-cmake mingw-w64-x86_64-cmake
-pacman -S perl ruby python2 mingw-w64-i686-toolchain mingw-w64-x86_64-toolchain
-pacman -S mingw-w64-i686-ffmpeg mingw-w64-x86_64-ffmpeg
-exit
-```
-
-4. open a new MSYS2 shell and build the necessary libraries
-
-#### Compilation of the Qt5 libraries
-
-5. download and unzip the sources
-
-```bash
-wget http://download.qt.io/archive/qt/5.15/5.15.8/submodules/qtbase-everywhere-opensource-src-5.15.8.zip
-unzip qtbase-everywhere-opensource-src-5.15.8.zip
-mv qtbase-everywhere-src-5.15.8 qt5
-```
-
-the renaming of the directory is necessary to not generate a compile-time error caused by the 255 characters maximum path length limitation on Windows, This is the typical error message you might encounter:
-
-```code
-"../../../../include/QtEventDispatcherSupport/5.15.8/QtEventDispatcherSupport/private/qwindowsguieventdispatcher_p.h:1:10: fatal error: ../../../../../src/platformsupport/eventdispatchers/qwindowsguieventdispatcher_p.h: No such file or directory"
-```
-
-6. compile the libraries
-
-```bash
-cd qt5
-echo -e "QMAKE_LFLAGS += -static -static-libgcc\nDEFINES += QT_STATIC_BUILD\n" >> mkspecs/win32-g++/qmake.conf
-./configure.bat -prefix $MINGW_PREFIX -extprefix $MINGW_PREFIX -bindir $MINGW_PREFIX/lib/qt5/bin -headerdir $MINGW_PREFIX/include/qt5 -libdir $MINGW_PREFIX/lib/qt5 -archdatadir $MINGW_PREFIX/lib/qt5 -plugindir $MINGW_PREFIX/lib/qt5/plugins -libexecdir $MINGW_PREFIX/lib/qt5/bin -datadir $MINGW_PREFIX/share/qt5 -docdir $MINGW_PREFIX/share/doc/qt5 -translationdir $MINGW_PREFIX/share/qt5/translations -sysconfdir $MINGW_PREFIX/etc/xdg -examplesdir $MINGW_PREFIX/share/qt5/examples -testsdir $MINGW_PREFIX/share/qt5/tests -platform win32-g++ -nomake examples -nomake tests -nomake tools -no-compile-examples -release -opensource -confirm-license -static -c++std c++17 -sse2 -static-runtime -make libs -no-ltcg -no-dbus -no-accessibility -no-inotify -no-iconv -no-icu -no-openssl -no-system-proxies -no-cups -no-fontconfig -no-zstd -opengl desktop -no-angle -gif -ico -qt-libpng -qt-libjpeg -qt-pcre -qt-zlib -qt-freetype
-make
-```
-
-7. and finally install them
-
-```bash
-make install
-cp -v $MINGW_PREFIX/lib/qt5/pkgconfig/* $MINGW_PREFIX/lib/pkgconfig/.
-cd ..
-```
-
-8. now it's time for the SVG module...
-
-```bash
-wget http://download.qt.io/archive/qt/5.15/5.15.8/submodules/qtsvg-everywhere-opensource-src-5.15.8.zip
-unzip qtsvg-everywhere-opensource-src-5.15.8.zip
-mv qtsvg-everywhere-src-5.15.8 qt5svg
-cd qt5svg
-$MINGW_PREFIX/lib/qt5/bin/qmake
-make
-make install
-cp -v $MINGW_PREFIX/lib/qt5/pkgconfig/* $MINGW_PREFIX/lib/pkgconfig/.
-cd ..
-```
-
-9. ...and for the tools
-
-```bash
-wget http://download.qt.io/archive/qt/5.15/5.15.8/submodules/qttools-everywhere-opensource-src-5.15.8.zip
-unzip qttools-everywhere-opensource-src-5.15.8.zip
-mv qttools-everywhere-src-5.15.8 qt5tools
-cd qt5tools
-$MINGW_PREFIX/lib/qt5/bin/qmake
-make
-make install
-cd ..
-```
-
-#### Compilation of puNES
-
-10. Now you have everything you need to compile correctly puNES
+Install MSYS2, open the **CLANG64** (or **CLANGARM64**) shell, and run
 
 ```bash
 git clone https://github.com/punesemu/puNES
 cd puNES
+bash build.sh -j2
 ```
 
-if you want D3D9 version :
+`build.sh` takes care of everything: it points pacman at a mirror that is
+reachable, installs/updates the toolchain and the libraries, configures and
+compiles, runs the unit tests and packages the result in `../products/puNES`
+(the directory is wiped first, so nothing stale can survive into a package).
+Nothing is downloaded from a hardcoded URL and no package name is hardcoded:
+the repository comes from the platform and the package prefix is read off that
+repository's own index.
 
-```bash
-cmake -B build -G Ninja -DENABLE_FFMPEG:BOOL=ON -DENABLE_OPENGL:BOOL=OFF
-cmake --build build -j2
-```
+Every stage has its own switch. The three a normal build wants are on by
+default, the tests are not:
 
-otherwise :
+| Stage    | on by default | turn it off with | force it on with |
+|----------|---------------|------------------|------------------|
+| mirrors  | no            | `--no-mirrors`   | `--mirrors`      |
+| download | yes           | `--no-download`  | `--download`     |
+| build    | yes           | `--no-build`     | `--build`        |
+| package  | yes           | `--no-package`   | `--package`      |
+| tests    | no            | `--no-tests`     | `--tests`        |
 
-```bash
-cmake -B build -G Ninja -DENABLE_FFMPEG:BOOL=ON
-cmake --build build -j2
-```
+Other options:
 
-The executable `punes.exe` is in the `build/src` directory but in order to run it you need the following dlls:
+| Option         | Description                                                              |
+|----------------|--------------------------------------------------------------------------|
+| `--mirrors`    | rewrite `/etc/pacman.d/mirrorlist.{mingw,msys}` to use China mirrors      |
+| `--tests`      | run the shader regression and the copy-out launch test                    |
+| `--shaders`    | only the shader regression                                                |
+| `--copyout`    | only the copy-out launch test                                             |
+| `--out=DIR`    | package destination (default `../products/puNES`)                         |
+| `-j N`         | parallel build jobs (default: cpu count; 8 GB without a page file wants `-j2`) |
+| `-h`           | show the same summary from the script itself                              |
 
-- 7z.dll
-- avcodec-58.dll
-- avformat-58.dll
-- avutil-56.dll
-- cg.dll
-- cgD3D9.dll (only for D3D9 version)
-- cgGL.dll (only for OpenGL version)
-- libwinpthread-1.dll
-- swresample-3.dll
-- swscale-5.dll
+The unit tests are not behind `--tests`: they are a host binary that runs in
+seconds and they are the only guard on the ROM CRC path, so they run with every
+`--build`.
 
-that you can download here : :link:[`64bit`](https://www.dropbox.com/s/d632cjezybz6a74/puNES_x86_64_dlls.zip?dl=1) version or :link:[`32bit`](https://www.dropbox.com/s/ye00129nyacdl05/puNES_i686_dlls.zip?dl=1) version.
+#### How the package is assembled
+
+Nothing is copied by hand and no DLL list is maintained anywhere, because a
+hand written list is wrong the moment a dependency changes.
+
+1. `windeployqt` stages Qt, including the plugins that no import table mentions.
+2. `ntldd.exe` is copied into the output directory and every measurement is
+   taken from there, with the working directory inside it and a `PATH` holding
+   only `C:\Windows\System32` and `C:\Windows`. The Windows loader searches the
+   host executable's own directory first, so this is what makes ntldd answer
+   "what does this package need" instead of "what can this MSYS2 install find".
+   MSYS2's own `ldd` cannot be used: it goes one level deep and its `-r` is
+   unimplemented.
+3. `ntldd -R` reports the libraries it cannot find. Those are exactly the ones
+   Windows does not supply. Each one that exists in the toolchain is copied in
+   from there, and the round repeats until a round stages nothing.
+4. The finished package is measured again, file by file, and the build fails if
+   anything the toolchain provides is missing.
+
+There are no name based special cases: the rule is "is it in the toolchain",
+which is why `api-ms-*`/`ext-ms-*` and the Windows-only libraries need no
+mention anywhere.
 
 #### Windows Debug version
 
-If you need the debug version then you need to replace the `cmake -B build -G Ninja` command of the previous examples with the following:
+Replace the `build.sh` invocation with a manual configure:
 
 ```bash
-cmake -B build -G Ninja -DCMAKE_C_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_CXX_FLAGS_DEBUG:STRING='-O0 -g -DDEBUG' -DCMAKE_BUILD_TYPE:STRING=Debug -DENABLE_RELEASE:BOOL=OFF [...]
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DENABLE_RELEASE=OFF
+cmake --build build -j2
 ```
 
-where `[...]` are the other necessary options.
+The executable is `build/src/punes.exe`, with a console window attached while
+`ENABLE_RELEASE=OFF`.
 
 </details>
 
@@ -669,8 +471,8 @@ where `[...]` are the other necessary options.
 
 #### :movie_camera: FFmpeg
 
-It is always possible to disable audio/video recording support by specifying the `configure` parameter `--without-ffmpeg`.
-If the installed version is lower than 4.0 the support will be disabled automatically.
+FFmpeg is the recording backend and it is required: there is no longer a way to
+build puNES without it.
 
 Supported audio recording formats:
 

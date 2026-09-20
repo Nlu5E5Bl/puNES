@@ -469,7 +469,6 @@ void wdgSettingsInput::shortcut_update_text(const QAction *action, int index) co
 	int row = index - SET_INP_SC_OPEN;
 
 	// action
-#if defined (WITH_FFMPEG)
 	if (index == SET_INP_SC_REC_AUDIO) {
 		tableWidget_Shortcuts->item(row, 0)->setText(tr("Start/Stop AUDIO recording"));
 		tableWidget_Shortcuts->item(row, 0)->setToolTip(tr("Start/Stop AUDIO recording"));
@@ -483,15 +482,6 @@ void wdgSettingsInput::shortcut_update_text(const QAction *action, int index) co
 		tableWidget_Shortcuts->item(row, 0)->setText(text.at(0));
 		tableWidget_Shortcuts->item(row, 0)->setToolTip(text.at(0));
 	}
-#else
-	if (index == SET_INP_SC_REC_AUDIO) {
-		tableWidget_Shortcuts->item(row, 0)->setText(tr("Start/Stop WAV recording"));
-		tableWidget_Shortcuts->item(row, 0)->setToolTip(tr("Start/Stop WAV recording"));
-	} else {
-		tableWidget_Shortcuts->item(row, 0)->setText(text.at(0));
-		tableWidget_Shortcuts->item(row, 0)->setToolTip(text.at(0));
-	}
-#endif
 
 	// keyboard
 	tableWidget_Shortcuts->cellWidget(row, 1)->findChild<QKeySequenceEdit *>("value")->setKeySequence(shcut.text[KEYBOARD].at(row));
@@ -825,9 +815,7 @@ void wdgSettingsInput::shortcuts_set(void) const {
 
 	shortcut_update_text(mainwin->wd->action_Open, SET_INP_SC_OPEN);
 	shortcut_update_text(mainwin->wd->action_Start_Stop_Audio_recording, SET_INP_SC_REC_AUDIO);
-#if defined (WITH_FFMPEG)
 	shortcut_update_text(mainwin->wd->action_Start_Stop_Video_recording, SET_INP_SC_REC_VIDEO);
-#endif
 	shortcut_update_text(mainwin->wd->action_Quit, SET_INP_SC_QUIT);
 	shortcut_update_text(mainwin->wd->action_Turn_Off, SET_INP_SC_TURN_OFF);
 	shortcut_update_text(mainwin->wd->action_Hard_Reset, SET_INP_SC_HARD_RESET);

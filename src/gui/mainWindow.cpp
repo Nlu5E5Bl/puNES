@@ -61,14 +61,8 @@
 #include "debugger.h"
 #include "tape_data_recorder.h"
 #include "dipswitch.h"
-#if defined (WITH_FFMPEG)
 #include "recording.h"
-#else
-#include "audio/wave.h"
-#endif
-#if defined (FULLSCREEN_RESFREQ)
 #include "video/gfx_monitor.h"
-#endif
 
 enum state_incdec_enum { INC, DEC };
 enum state_save_enum { SAVE, LOAD };
@@ -246,47 +240,21 @@ void wdgDlgMainWindow::update_gfx_monitor_dimension(const bool adjust_fs_geom) {
 		gfx.h[MONITOR] -= (wd->menubar->isHidden() ? 0 : wd->menubar->sizeHint().height());
 		gfx.h[MONITOR] -= (wd->statusbar->isHidden() ? 0 : wd->statusbar->sizeHint().height());
 	} else if (gfx.type_of_fscreen_in_use == FULLSCR) {
+		// The screen rectangle is used exactly as Qt reports it.  It is already
+		// in the current display orientation, so it must NOT be transposed here:
+		// doing that is what made a 2340x1080 landscape panel produce a
+		// 1080x2340 window, a framebuffer that no longer matched the viewport
+		// and an image drawn partly off screen.
+		const qreal dpr = win_handle_screen()->devicePixelRatio();
+
 		fs_geom = win_handle_screen()->geometry();
 
-		switch (win_handle_screen()->orientation()) {
-			default:
-			case Qt::LandscapeOrientation:
-				gfx.screen_rotation = ROTATE_0;
-				break;
-			case Qt::InvertedPortraitOrientation:
-				gfx.screen_rotation = ROTATE_90;
-				break;
-			case Qt::InvertedLandscapeOrientation:
-				gfx.screen_rotation = ROTATE_180;
-				break;
-			case Qt::PortraitOrientation:
-				gfx.screen_rotation = ROTATE_270;
-				break;
-		}
-
-#if defined (FULLSCREEN_RESFREQ)
-		if (setup_in_out_fullscreen) {
-			int w, h, x, y;
-
-			if (gfx_monitor_mode_in_use_info(&x, &y, &w, &h, nullptr) == EXIT_OK) {
-				if ((gfx.screen_rotation == ROTATE_90) || (gfx.screen_rotation == ROTATE_270)) {
-					fs_geom = QRect(x, y, h, w);
-				} else {
-					fs_geom = QRect(x, y, w, h);
-				}
-			}
-		}
-#endif
-
-		gfx.w[MONITOR] = fs_geom.width();
-		gfx.h[MONITOR] = fs_geom.height();
-
-		{
-			const qreal dpr = win_handle_screen()->devicePixelRatio();
-
-			gfx.w[MONITOR] = (SDBWORD)((qreal)gfx.w[MONITOR] / dpr);
-			gfx.h[MONITOR] = (SDBWORD)((qreal)gfx.h[MONITOR] / dpr);
-		}
+		// gfx.w/h[MONITOR] hold the full screen size in *physical* pixels,
+		// because that is the unit the framebuffer and the OpenGL viewport are
+		// expressed in (see opengl_context_create()).  fs_geom stays in the
+		// logical pixels Qt uses to size windows.
+		gfx.w[MONITOR] = (SDBWORD)((qreal)fs_geom.width() * dpr);
+		gfx.h[MONITOR] = (SDBWORD)((qreal)fs_geom.height() * dpr);
 	}
 }
 void wdgDlgMainWindow::set_dialog_geom(QRect &new_geom) const {
@@ -317,33 +285,21 @@ void wdgDlgMainWindow::set_fullscreen(void) {
 			title_bar->is_in_fullscreen = true;
 			title_bar->set_fullscreen_button_icon();
 		}
-		if (gfx.only_fullscreen_in_window || cfg->fullscreen_in_window) {
+		if (cfg->fullscreen_in_window) {
 			QRect fs_win_geom = win_handle_screen()->availableGeometry();
-#if defined (_WIN32)
 			// lo showMaximized sotto windows non considera la presenza della barra delle applicazioni
 			// cercando di impostare una dimensione falsata percio' ridimensiono la finestra manualmente.
 			bool desktop_resolution = false;
-#else
-#if QT_VERSION == QT_VERSION_CHECK(5, 12, 8)
-			// con le QT 5.12.8 (Xubuntu 2004) lo showMaximized non funziona per un bug
-			// nelle Qt quindi utilizzo il vecchio metodo.
-			bool desktop_resolution = false;
-#else
-			bool desktop_resolution = true;
-#endif
-#endif
 
 			gfx.type_of_fscreen_in_use = FULLSCR_IN_WINDOW;
 			gfx.w[FSCR_RESIZE] = 0;
 			gfx.h[FSCR_RESIZE] = 0;
-#if defined (FULLSCREEN_RESFREQ)
 			if ((cfg->fullscreen_res_w >= 0) && (cfg->fullscreen_res_h >= 0) &&
 				((cfg->fullscreen_res_w != win_handle_screen()->availableGeometry().width()) ||
 				(cfg->fullscreen_res_h != win_handle_screen()->availableGeometry().height()))) {
 				fs_win_geom = QRect(org_geom.x(), org_geom.y(), cfg->fullscreen_res_w, cfg->fullscreen_res_h);
 				desktop_resolution = false;
 			}
-#endif
 			if (desktop_resolution) {
 				wd->reset_min_max_size();
 				layout()->setSizeConstraint(QLayout::SetDefaultConstraint);
@@ -379,15 +335,9 @@ void wdgDlgMainWindow::set_fullscreen(void) {
 
 			// sposto la finestra nell'angolo superiore del monitor
 			move(fs_geom.x() - (geometry().x() - x()), fs_geom.y() - (geometry().y() - y()));
-#if defined (_WIN32)
 			setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
 			gfx.w[FSCR_RESIZE] = 0;
 			gfx.h[FSCR_RESIZE] = 0;
-#else
-			setWindowState(Qt::WindowFullScreen);
-			gfx.w[FSCR_RESIZE] = fs_geom.width();
-			gfx.h[FSCR_RESIZE] = fs_geom.height();
-#endif
 			show();
 			wd->setFixedSize(fs_geom.width(), fs_geom.height());
 			gfx_set_screen(NO_CHANGE, NO_CHANGE, NO_CHANGE, FULLSCR, NO_CHANGE, FALSE, FALSE);
@@ -413,10 +363,6 @@ void wdgDlgMainWindow::set_fullscreen(void) {
 		layout()->setSizeConstraint(size_constraint);
 		gfx_set_screen(gfx.scale_before_fscreen, NO_CHANGE, NO_CHANGE, NO_FULLSCR, NO_CHANGE, FALSE, FALSE);
 		setGeometry(org_geom.x(), org_geom.y(), geometry().width(), geometry().height());
-		// al rientro dal fullscreen a finestra devo eseguire un update() ritardato per ridisignare correttamente la GUI.
-		if (gfx.only_fullscreen_in_window) {
-			QTimer::singleShot(200, this, [this]() { update(); });
-		}
 	}
 
 	emu_thread_continue();
@@ -455,34 +401,24 @@ void wdgDlgMainWindow::s_set_fullscreen(void) {
 		org_geom = geometry();
 		wd->visibility.menubar = wd->menubar->isVisible();
 		wd->visibility.toolbars = wd->toolbar->isVisible();
-		if (!gfx.only_fullscreen_in_window) {
-			// muovo la finestra nell'angolo superiore del monitor, e' importante
-			// perche' in caso di cambio di risoluzione nell fullscreen, se posizionata
-			// nella parte destra del monitor potrebbe non essere visualizzata correttamente.
-			// E' importante che lo spostamento avvenga prima dell'hide().
-			if (!cfg->fullscreen_in_window) {
-				const QRect mgeom = win_handle_screen()->geometry();
+		// muovo la finestra nell'angolo superiore del monitor, e' importante
+		// perche' in caso di cambio di risoluzione nell fullscreen, se posizionata
+		// nella parte destra del monitor potrebbe non essere visualizzata correttamente.
+		// E' importante che lo spostamento avvenga prima dell'hide().
+		if (!cfg->fullscreen_in_window) {
+			const QRect mgeom = win_handle_screen()->geometry();
 
-				move(mgeom.x() - (geometry().x() - x()), mgeom.y() - (geometry().y() - y()));
-			}
-			hide();
-#if defined (FULLSCREEN_RESFREQ)
-			if (!cfg->fullscreen_in_window) {
-				delay = gfx_monitor_set_res(cfg->fullscreen_res_w, cfg->fullscreen_res_h, cfg->adaptive_rrate, FALSE);
-			}
-#endif
+			move(mgeom.x() - (geometry().x() - x()), mgeom.y() - (geometry().y() - y()));
 		}
-#if defined (FULLSCREEN_RESFREQ)
+		hide();
+		if (!cfg->fullscreen_in_window) {
+			delay = gfx_monitor_set_res(cfg->fullscreen_res_w, cfg->fullscreen_res_h, cfg->adaptive_rrate, FALSE);
+		}
 	} else {
-		// su Fedora 35 (Wayland, Gnome 41.5 e QT 5.15.2) il Fullscreen non funziona e
-		// quello a finestra funziona solo se non eseguo l'hide().
-		if (!gfx.only_fullscreen_in_window) {
-			hide();
-		}
+		hide();
 		if (gfx.type_of_fscreen_in_use == FULLSCR) {
 			delay = gfx_monitor_restore_res();
 		}
-#endif
 	}
 
 	if (delay) {
@@ -637,9 +573,6 @@ mainWindow::mainWindow() : QMainWindow() {
 	connect_menu_signals();
 	shortcuts();
 
-#if !defined (WITH_FFMPEG)
-	action_Recording->setVisible(false);
-#endif
 #if !defined (DEBUG)
 	action_Current_state_to_puNES_image->setVisible(false);
 #endif
@@ -692,7 +625,6 @@ void mainWindow::update_window(void) {
 	statusbar->update_statusbar();
 }
 void mainWindow::update_recording_widgets(void) const {
-#if defined (WITH_FFMPEG)
 	QIcon ia = QIcon(":/icon/icons/nsf_file.svgz"), iv = QIcon(":/icon/icons/film.svgz");
 	QString sa = tr("Start &AUDIO recording"), sv = tr("Start &VIDEO recording");
 	bool audio = false, video = false;
@@ -727,28 +659,6 @@ void mainWindow::update_recording_widgets(void) const {
 	action_Start_Stop_Video_recording->setEnabled(video);
 	action_text(action_Start_Stop_Video_recording, sv, sc);
 	action_Start_Stop_Video_recording->setIcon(iv);
-#else
-	QIcon ia = QIcon(":/icon/icons/multimedia_record.svgz");
-	QString sa = tr("Start &WAV recording");
-	bool audio = false;
-
-	emit statusbar->rec->et_blink_icon();
-
-	if (!(info.no_rom | info.turn_off | rwnd.active)) {
-		audio = true;
-		if (info.recording_on_air) {
-			sa = tr("Stop &WAV recording");
-			ia = QIcon(":/icon/icons/multimedia_stop.svgz");
-		}
-	}
-
-	QString *sc = (QString *)settings_inp_rd_sc(SET_INP_SC_REC_AUDIO, KEYBOARD);
-	action_Start_Stop_Audio_recording->setEnabled(audio);
-	action_text(action_Start_Stop_Audio_recording, sa, sc);
-	action_Start_Stop_Audio_recording->setIcon(ia);
-
-	action_Start_Stop_Video_recording->setVisible(false);
-#endif
 }
 void mainWindow::set_language(const int lang) const {
 	QString lng = "en", file = "en_EN";
@@ -942,9 +852,7 @@ void mainWindow::shortcuts(void) const {
 	// File
 	connect_shortcut(action_Open, SET_INP_SC_OPEN, SLOT(s_open()));
 	connect_shortcut(action_Start_Stop_Audio_recording, SET_INP_SC_REC_AUDIO, SLOT(s_start_stop_audio_recording()));
-#if defined (WITH_FFMPEG)
 	connect_shortcut(action_Start_Stop_Video_recording, SET_INP_SC_REC_VIDEO, SLOT(s_start_stop_video_recording()));
-#endif
 	connect_shortcut(action_Quit, SET_INP_SC_QUIT, SLOT(s_quit()));
 	// NES
 	connect_shortcut(action_Turn_Off, SET_INP_SC_TURN_OFF, SLOT(s_turn_on_off()));
@@ -1141,9 +1049,7 @@ void mainWindow::connect_menu_signals(void) const {
 	connect_action(action_Apply_Patch, SLOT(s_apply_patch()));
 	connect_action(action_Edit_Current_Header, SLOT(s_open_edit_current_header()));
 	connect_action(action_Start_Stop_Audio_recording, SLOT(s_start_stop_audio_recording()));
-#if defined (WITH_FFMPEG)
 	connect_action(action_Start_Stop_Video_recording, SLOT(s_start_stop_video_recording()));
-#endif
 	connect_action(action_Open_config_folder, SLOT(s_open_config_folder()));
 	connect_action(action_Open_working_folder, SLOT(s_open_working_folder()));
 	connect_action(action_Quit, SLOT(s_quit()));
@@ -2099,7 +2005,6 @@ void mainWindow::s_start_stop_audio_recording(void) {
 		return;
 	}
 
-#if defined (WITH_FFMPEG)
 	if (!info.recording_on_air) {
 		wdgRecGetSaveFileName *fd = new wdgRecGetSaveFileName(this);
 
@@ -2119,49 +2024,7 @@ void mainWindow::s_start_stop_audio_recording(void) {
 	} else if (recording_format_type() == REC_FORMAT_AUDIO) {
 		recording_finish(FALSE);
 	}
-#else
-	if (!info.recording_on_air) {
-		const QFileInfo rom = QFileInfo(uQString(info.rom.file));
-		QStringList filters;
-		QString dir;
-
-		emu_pause(TRUE);
-
-		filters.append(tr("MS WAVE files"));
-		filters.append(tr("All files"));
-
-		filters[0].append(" (*.wav *.WAV)");
-		filters[1].append(" (*.*)");
-
-		if (ustrlen(cfg->last_rec_audio_path) == 0) {
-			dir = rom.dir().absolutePath();
-		} else {
-			dir = uQString(cfg->last_rec_audio_path);
-		}
-
-		const QString file = QFileDialog::getSaveFileName(this, tr("Record sound"),
-			dir + "/" + rom.completeBaseName(), filters.join(";;"));
-
-		if (!file.isNull()) {
-			const QFileInfo fileinfo(file);
-
-			if (fileinfo.suffix().isEmpty()) {
-				fileinfo.setFile(QString("%0.wav").arg(file));
-			}
-
-			umemset(cfg->last_rec_audio_path, 0x00, usizeof(cfg->last_rec_audio_path));
-			ustrncpy(cfg->last_rec_audio_path, uQStringCD(fileinfo.absolutePath()), usizeof(cfg->last_rec_audio_path) - 1);
-			wav_from_audio_emulator_open(uQStringCD(fileinfo.absoluteFilePath()), snd.samplerate * 5);
-		}
-
-		emu_pause(FALSE);
-	} else {
-		wav_from_audio_emulator_close();
-	}
-	update_menu_file();
-#endif
 }
-#if defined (WITH_FFMPEG)
 void mainWindow::s_start_stop_video_recording(void) {
 	if (info.no_rom) {
 		return;
@@ -2186,7 +2049,6 @@ void mainWindow::s_start_stop_video_recording(void) {
 		recording_finish(FALSE);
 	}
 }
-#endif
 void mainWindow::s_save_screenshot(void) {
 	info.screenshot = SCRSH_STANDARD;
 }
@@ -2535,11 +2397,9 @@ void mainWindow::s_shcjoy_read_timer(void) {
 						case SET_INP_SC_REC_AUDIO:
 							action_Start_Stop_Audio_recording->trigger();
 							break;
-#if defined (WITH_FFMPEG)
 						case SET_INP_SC_REC_VIDEO:
 							action_Start_Stop_Video_recording->trigger();
 							break;
-#endif
 						case SET_INP_SC_QUIT:
 							action_Quit->trigger();
 							break;
@@ -2698,7 +2558,7 @@ void mainWindow::s_exec_message(void) {
 			setWindowState(windowState() & ~Qt::WindowMinimized);
 		}
 		raise();
-#if defined (_WIN32)
+#if defined (_WIN32) && (QT_VERSION < QT_VERSION_CHECK(6, 0, 0))
 		QApplication::setActiveWindow(this);
 #else
 		activateWindow();
@@ -2983,11 +2843,9 @@ void timerEgds::s_draw_screen(void) {
 	}
 
 	if (ret) {
-#if defined (WITH_FFMPEG)
 		if (info.recording_on_air) {
 			recording_audio_silenced_frame();
 		}
-#endif
 		gfx_draw_screen(nidx);
 	}
 }

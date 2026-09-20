@@ -1,3 +1,23 @@
+# Aggressive optimisation flags for release builds.
+#   -O3                 maximum optimisation level (plain -O3, nothing beyond it)
+#   -pipe               use pipes instead of temporary files
+#   -flto=auto          link time optimisation (parallel where the compiler supports it)
+#   -fdata-sections/-ffunction-sections + --gc-sections
+#                       let the linker drop unreferenced functions and data
+#   -Wl,--strip-all     strip every symbol from the final executable
+# Note: no -march=native on purpose, the release binaries must stay portable.
+# Note: no -ffast-math. It is not part of "standard -O3" and it changes the
+#       floating point semantics the audio resampling path depends on.
+#       src/extra/kissfft asks for it in its own CMakeLists, so the vendored
+#       subprojects are re-stamped below rather than patched in place: the
+#       third-party sources stay byte for byte as they were released.
+if(ENABLE_RELEASE)
+	set(PUNES_RELEASE_COMPILE_OPTIONS -O3 -pipe -flto=auto -fdata-sections -ffunction-sections)
+	set(PUNES_RELEASE_LINK_OPTIONS -flto=auto -Wl,--gc-sections -Wl,--strip-all)
+	add_compile_options(${PUNES_RELEASE_COMPILE_OPTIONS})
+	add_link_options(${PUNES_RELEASE_LINK_OPTIONS})
+endif()
+
 # Translation files
 set(ts_files
 	gui/designer/translations/ar_AR.ts
@@ -42,6 +62,23 @@ FetchContent_Declare(qkeycode
 	)
 FetchContent_MakeAvailable(qkeycode)
 
+# Re-stamp the vendored subprojects with the release flag set above. FetchContent
+# enters them as their own directories, which have already been processed by the
+# time this file runs, so the directory property cannot reach them any more --
+# and at least one of them (kissfft) adds -ffast-math to its own compile options.
+# This prepends the flag set so the last word on the command line is ours,
+# without touching a single byte of the imported sources.
+if(ENABLE_RELEASE)
+	foreach(_t lib7zip qkeycode)
+		get_target_property(_aliased ${_t} ALIASED_TARGET)
+		if(_aliased)
+			continue()
+		endif()
+		target_compile_options(${_t} PRIVATE ${PUNES_RELEASE_COMPILE_OPTIONS})
+		target_link_options(${_t} PRIVATE ${PUNES_RELEASE_LINK_OPTIONS})
+	endforeach()
+endif()
+
 set(audio_srcs
 	audio/blip_buf.c
 	audio/blipbuf.c
@@ -51,15 +88,7 @@ set(audio_srcs
 	audio/mono.c
 	audio/panning.c
 	audio/wave.c
-	$<$<PLATFORM_ID:Linux>:
-		audio/alsa/snd.c
-	>
-	$<$<PLATFORM_ID:FreeBSD,OpenBSD>:
-		audio/sndio/snd.c
-	>
-	$<$<PLATFORM_ID:Windows>:
-		audio/xaudio/snd.c
-	>
+	audio/xaudio/snd.c
 	)
 
 set(c++_srcs
@@ -536,7 +565,7 @@ set(core_srcs
 	core/patcher.c
 	core/patcher_xdelta3_wrap.c
 	core/ppu.c
-	$<$<BOOL:${ENABLE_FFMPEG}>:core/recording.c>
+	core/recording.c
 	core/rewind.c
 	core/rom_mem.c
 	core/save_slot.c
@@ -599,7 +628,7 @@ set(gui_ui_srcs
 
 set(gui_srcs
 	# N.B: Include here both cpp and hpp files since automoc relies on both types
-	gui/cgp.cpp
+	gui/shd_preset.cpp
 	gui/cmd_line.cpp
 	gui/dipswitch.cpp
 	gui/dlgAbout.cpp
@@ -686,31 +715,12 @@ set(gui_srcs
 	gui/wdgTitleBarWindow.hpp
 	gui/wdgToolBar.cpp
 	gui/wdgToolBar.hpp
+	gui/wdgOpenGL.cpp
+	gui/wdgOpenGL.hpp
 
-	$<IF:$<BOOL:${ENABLE_OPENGL}>,
-		gui/wdgOpenGL.cpp
-		gui/wdgOpenGL.hpp,
-		gui/wdgD3D9.cpp
-		gui/wdgD3D9.hpp
-	>
-
-	$<$<PLATFORM_ID:Windows>:
-		$<$<BOOL:${ENABLE_FULLSCREEN_RESFREQ}>:gui/windows/monitor.c>
-		gui/windows/os_jstick.c
-		gui/windows/resources.rc
-	>
-
-	$<$<PLATFORM_ID:FreeBSD,OpenBSD>:
-		gui/bsd/os_jstick.c
-	>
-
-	$<$<PLATFORM_ID:Linux>:
-		gui/linux/os_jstick.c
-	>
-
-	$<$<AND:$<PLATFORM_ID:FreeBSD,OpenBSD,Linux>,$<BOOL:${ENABLE_FULLSCREEN_RESFREQ}>>:
-		gui/linux/monitor.c
-	>
+	gui/windows/monitor.c
+	gui/windows/os_jstick.c
+	gui/windows/resources.rc
 	)
 
 set(video_srcs
@@ -732,18 +742,12 @@ set(video_srcs
 	video/filters/scalers.c
 	video/filters/xBRZ.c
 	video/gfx.c
-	$<$<BOOL:${ENABLE_FULLSCREEN_RESFREQ}>:
-		video/gfx_monitor.c
-	>
+	video/gfx_monitor.c
 	video/gfx_thread.c
 	video/shaders/shaders.c
-	$<IF:$<BOOL:${ENABLE_OPENGL}>,
-		video/opengl/glew/glew.c
-		video/opengl/gfx_api.c
-		video/opengl/opengl.c,
-		video/d3d9/d3d9.c
-		video/d3d9/gfx_api.c
-	>
+	video/opengl/glew/glew.c
+	video/opengl/gfx_api.c
+	video/opengl/opengl.c
 	)
 
 add_executable(punes
@@ -755,7 +759,7 @@ add_executable(punes
 	${gui_srcs}
 	${video_srcs}
 	${CMAKE_CURRENT_BINARY_DIR}/translations.qrc
-	$<$<PLATFORM_ID:Windows>:gui/windows/resources.rc>
+	gui/windows/resources.rc
 	)
 
 target_include_directories(punes
@@ -764,48 +768,26 @@ target_include_directories(punes
 	audio
 	core
 	gui
-	$<IF:$<BOOL:${ENABLE_OPENGL}>,
-		${CMAKE_CURRENT_SOURCE_DIR}/video/opengl,
-		${CMAKE_CURRENT_SOURCE_DIR}/video/d3d9
-	>
+	${CMAKE_CURRENT_SOURCE_DIR}/video/opengl
 	video/shaders
 	"${PROJECT_BINARY_DIR}"
-	$<$<PLATFORM_ID:FreeBSD,OpenBSD>:${CMAKE_CURRENT_SOURCE_DIR}/gui/bsd>
-	$<$<PLATFORM_ID:Linux>:${CMAKE_CURRENT_SOURCE_DIR}/gui/linux>
-	$<$<PLATFORM_ID:Windows>:
-		${CMAKE_CURRENT_SOURCE_DIR}/gui/windows
-		${CMAKE_CURRENT_SOURCE_DIR}/extra/windows/Cg/include
-		${CMAKE_CURRENT_SOURCE_DIR}/extra/windows/DSDK/Include
-		${CMAKE_CURRENT_SOURCE_DIR}/extra/windows/DSDK/vc10/include
-	>
+	${CMAKE_CURRENT_SOURCE_DIR}/gui/windows
 	)
 
 target_link_options(punes
 	PRIVATE
-	$<$<PLATFORM_ID:Windows>:
-		-static-libgcc
-		-static-libstdc++
-		$<$<BOOL:${ENABLE_RELEASE}>:-Wl,-subsystem,windows>
-		$<$<NOT:$<BOOL:${ENABLE_RELEASE}>>:-Wl,-subsystem,console>
-		$<IF:$<STREQUAL:${HOST_CPU},i386>,
-			-L${CMAKE_CURRENT_SOURCE_DIR}/extra/windows/Cg/lib,
-			-L${CMAKE_CURRENT_SOURCE_DIR}/extra/windows/Cg/lib.x64
-		>
-	>
+	-static-libgcc
+	-static-libstdc++
+	$<$<BOOL:${ENABLE_RELEASE}>:-Wl,-subsystem,windows>
+	$<$<NOT:$<BOOL:${ENABLE_RELEASE}>>:-Wl,-subsystem,console>
 	)
 
 target_link_libraries(punes
 	${QT_LIBS_USED}
 	Threads::Threads
-	$<$<BOOL:${ENABLE_FFMPEG}>:PkgConfig::LIBAV>
-	$<$<PLATFORM_ID:FreeBSD,OpenBSD>:Sndio::Sndio>
-	$<$<PLATFORM_ID:FreeBSD,OpenBSD>:UsbHid::UsbHid>
-	$<$<PLATFORM_ID:Linux>:ALSA::ALSA>
-	$<$<PLATFORM_ID:Linux>:PkgConfig::UDEV>
+	PkgConfig::LIBAV
 	${WIN_LIBS_USED}
-	$<$<BOOL:${X11_FOUND}>:X11::Xrandr>
 	OpenGL::GL
-	$<$<AND:$<PLATFORM_ID:FreeBSD,OpenBSD,Linux>,$<BOOL:${ENABLE_OPENGL_CG}>>:Cg::CgGL>
 	lib7zip
 	qkeycode
 	)
@@ -814,7 +796,6 @@ target_compile_options(punes
 	PRIVATE
 	#-Wall
 	#-Wextra
-	-ffast-math
 	)
 
 # warnings disabled for this
@@ -825,15 +806,8 @@ target_compile_definitions(punes
 	PRIVATE
 	$<$<BOOL:${ENABLE_GIT_INFO}>:WITH_GIT_INFO>
 	$<$<BOOL:${ENABLE_RELEASE}>:RELEASE>
-	$<$<BOOL:${ENABLE_FFMPEG}>:WITH_FFMPEG>
 	$<$<BOOL:${DISABLE_PORTABLE_MODE}>:WITHOUT_PORTABLE_MODE>
-	$<IF:$<BOOL:${ENABLE_OPENGL}>,
-		GLEW_STATIC
-		WITH_OPENGL,
-		WITH_D3D9
-	>
-	$<$<BOOL:${ENABLE_OPENGL_CG}>:WITH_OPENGL_CG>
-	$<$<BOOL:${ENABLE_FULLSCREEN_RESFREQ}>:FULLSCREEN_RESFREQ>
+	GLEW_STATIC
 	)
 
 # Ship it!

@@ -232,14 +232,12 @@ EXTERNC void gui_nes_keyboard(void);
 EXTERNC void gui_nes_keyboard_paste_event(void);
 EXTERNC void gui_nes_keyboard_frame_finished(void);
 
-#if defined (WITH_OPENGL)
 EXTERNC void gui_wdgopengl_make_current(void);
 EXTERNC unsigned int gui_wdgopengl_framebuffer_id(void);
 
 EXTERNC void gui_screen_info(void);
 
 EXTERNC uint32_t gui_color(BYTE a, BYTE r, BYTE g, BYTE b);
-#endif
 
 EXTERNC BYTE gui_load_lut(void *l, const uTCHAR *path);
 EXTERNC void gui_save_screenshot(int w, int h, int stride, char *buffer, BYTE flip);
@@ -261,11 +259,9 @@ EXTERNC int gui_screen_id(void);
 EXTERNC int gui_win_id(void);
 #endif
 
-#if defined (FULLSCREEN_RESFREQ)
 EXTERNC BYTE gui_monitor_enum_monitors(void);
 EXTERNC void gui_monitor_set_res(void *monitor_info, void *mode_info);
 EXTERNC void gui_monitor_get_current_x_y(void *monitor_info, int *x, int *y);
-#endif
 
 EXTERNC void gui_warning(const uTCHAR *txt);
 EXTERNC void gui_critical(const uTCHAR *txt);

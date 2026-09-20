@@ -61,7 +61,6 @@ void chinaersan2_quit(void) {
 
 #define RENDER_WIDTH 256
 #define RENDER_HEIGHT 240
-#define MIN_GROUP 0x6
 #define MIN_INDEX 0x40
 #define MAX_GROUP 0xF
 #define MAX_INDEX 0x76

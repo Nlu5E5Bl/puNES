@@ -87,9 +87,7 @@ typedef struct _config {
 	BYTE fds_disk1sideA_at_reset;
 	BYTE fds_switch_side_automatically;
 	BYTE fds_fast_forward;
-#if defined (WITH_OPENGL)
 	BYTE disable_srgb_fbo;
-#endif
 	BYTE bck_pause;
 	WORD language;
 	int dipswitch;
@@ -99,11 +97,9 @@ typedef struct _config {
 	BYTE nsf_player_effect;
 	BYTE nsf_player_playlist;
 	BYTE nsf_player_nsf_fadeout;
-#if defined (FULLSCREEN_RESFREQ)
 	BYTE adaptive_rrate;
 	int fullscreen_res_w;
 	int fullscreen_res_h;
-#endif
 	BYTE vs_monitor;
 
 	_config_input input;
@@ -114,7 +110,6 @@ typedef struct _config {
 		_config_overclock def;
 		_config_overclock pergame;
 	} oclock_all;
-#if defined (WITH_FFMPEG)
 	struct _config_recording {
 		BYTE last_type;
 		BYTE audio_format;
@@ -126,7 +121,6 @@ typedef struct _config {
 		int output_custom_w;
 		int output_custom_h;
 	} recording;
-#endif
 
 	uTCHAR shader_file[LENGTH_FILE_NAME_LONG];
 	uTCHAR palette_file[LENGTH_FILE_NAME_LONG];
@@ -134,9 +128,7 @@ typedef struct _config {
 	uTCHAR gg_rom_file[LENGTH_FILE_NAME_LONG];
 	uTCHAR fds_bios_file[LENGTH_FILE_NAME_LONG];
 	uTCHAR last_import_cheat_path[LENGTH_FILE_NAME_LONG];
-#if defined (WITH_FFMPEG)
 	uTCHAR last_rec_video_path[LENGTH_FILE_NAME_LONG];
-#endif
 	uTCHAR last_rec_audio_path[LENGTH_FILE_NAME_LONG];
 
 	uTCHAR audio_output[100];

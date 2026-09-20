@@ -29,10 +29,6 @@
 #include "emu.h"
 #include "shaders.h"
 #include "nscode.hpp"
-#if defined (__unix__)
-#define XK_MISCELLANY
-#include <X11/keysymdef.h>
-#endif
 
 extern _emu_settings s;
 
@@ -70,7 +66,6 @@ static const struct _kv_specials {
 	{ 0,            Qt::KeypadModifier,  Qt::Key_Minus,    "NPSubtract", 270 },
 //	{ 0,            Qt::KeypadModifier,  Qt::Key_Period,   "NPDecimal",  271 },
 	{ 0,            Qt::KeypadModifier,  Qt::Key_Slash,    "NPDivide",   272 },
-#if defined (_WIN32)
 	{ VK_LMENU,     {},                  Qt::Key_Alt,      "Alt",        273 },
 	{ VK_RMENU,     {},                  Qt::Key_Alt,      "AltGr",      274 },
 	{ 0,            Qt::NoModifier,      Qt::Key_Meta,     "Meta",       275 },
@@ -78,28 +73,6 @@ static const struct _kv_specials {
 	{ VK_RSHIFT,    {},                  Qt::Key_Shift,    "RShift",     277 },
 	{ VK_LCONTROL,  {},                  Qt::Key_Control,  "LCtrl",      278 },
 	{ VK_RCONTROL,  {},                  Qt::Key_Control,  "RCtrl",      279 },
-#elif defined (__unix__)
-	/*
-	{ 0,            Qt::AltModifier,     Qt::Key_Alt,      "Alt",        273 },
-	{ 0,            Qt::NoModifier,      Qt::Key_AltGr,    "AltGr",      274 },
-	{ 0,            Qt::MetaModifier,    Qt::Key_Meta,     "Meta",       275 },
-	{ 0,            Qt::MetaModifier,    Qt::Key_Super_L,  "Meta",       275 },
-	{ 0,            Qt::MetaModifier,    Qt::Key_Super_R,  "Meta",       275 },
-	{ 0,            Qt::ShiftModifier,   Qt::Key_Shift,    "LShift",     276 },
-	{ 0,            Qt::ShiftModifier,   Qt::Key_Shift,    "RShift",     277 },
-	{ 0,            Qt::ControlModifier, Qt::Key_Control,  "LCtrl",      278 },
-	{ 0,            Qt::ControlModifier, Qt::Key_Control,  "RCtrl",      279 },
-	*/
-	{ 0,            Qt::NoModifier,      Qt::Key_Alt,      "Alt",        273 },
-	{ 0,            Qt::NoModifier,      Qt::Key_AltGr,    "AltGr",      274 },
-	{ 0,            Qt::NoModifier,      Qt::Key_Meta,     "Meta",       275 },
-	{ 0,            Qt::NoModifier,      Qt::Key_Super_L,  "Meta",       275 },
-	{ 0,            Qt::NoModifier,      Qt::Key_Super_R,  "Meta",       275 },
-	{ XK_Shift_L,   {},                  Qt::Key_Shift,    "LShift",     276 },
-	{ XK_Shift_R,   {},                  Qt::Key_Shift,    "RShift",     277 },
-	{ XK_Control_L, {},                  Qt::Key_Control,  "LCtrl",      278 },
-	{ XK_Control_R, {},                  Qt::Key_Control,  "RCtrl",      279 },
-#endif
 };
 /*
 static const struct _kv_table {
@@ -894,17 +867,13 @@ void objSet::to_cfg(const QString &group) {
 		int_to_val(SET_INPUT_DISPLAY, cfg_from_file.input_display);
 		int_to_val(SET_DISABLE_TV_NOISE, cfg_from_file.disable_tv_noise);
 		int_to_val(SET_DISABLE_SEPIA_PAUSE, cfg_from_file.disable_sepia_color);
-#if defined (WITH_OPENGL)
 		int_to_val(SET_DISABLE_SRGB_FBO, cfg_from_file.disable_srgb_fbo);
-#endif
 		int_to_val(SET_FULLSCREEN, cfg_from_file.fullscreen);
 		int_to_val(SET_FULLSCREEN_IN_WINDOW, cfg_from_file.fullscreen_in_window);
 		int_to_val(SET_INTEGER_FULLSCREEN, cfg_from_file.integer_scaling);
 		int_to_val(SET_STRETCH_FULLSCREEN, cfg_from_file.stretch);
-#if defined (FULLSCREEN_RESFREQ)
 		int_to_val(SET_ADAPTIVE_RRATE_FULLSCREEN, cfg_from_file.adaptive_rrate);
 		val.replace(SET_RESOLUTION_FULLSCREEN, resolution_val(&cfg_from_file.fullscreen_res_w, &cfg_from_file.fullscreen_res_h));
-#endif
 		int_to_val(SET_HORIZONTAL_FLIP_SCREEN, cfg_from_file.hflip_screen);
 		int_to_val(SET_SCREEN_ROTATION, cfg_from_file.screen_rotation);
 		int_to_val(SET_INPUT_ROTATION, cfg_from_file.input_rotation);
@@ -933,10 +902,8 @@ void objSet::to_cfg(const QString &group) {
 		int_to_val(SET_GUI_LANGUAGE, cfg_from_file.language);
 		int_to_val(SET_GUI_TOOLBAR_AREA, cfg_from_file.toolbar.area);
 		int_to_val(SET_GUI_TOOLBAR_HIDDEN, cfg_from_file.toolbar.hidden);
-#if defined (WITH_FFMPEG)
 		int_to_val(SET_GUI_REC_LAST_TYPE, cfg_from_file.recording.last_type);
 		cpy_utchar_to_val(SET_GUI_REC_LAST_VIDEO_PATH, cfg_from_file.last_rec_video_path);
-#endif
 		cpy_utchar_to_val(SET_GUI_REC_LAST_AUDIO_PATH, cfg_from_file.last_rec_audio_path);
 		int_to_val(SET_GUI_MULTIPLE_INSTANCES, cfg_from_file.multiple_instances);
 	}
@@ -969,7 +936,6 @@ void objSet::to_cfg(const QString &group) {
 		int_to_val(SET_NSF_PLAYER_NSF_FADEOUT, cfg_from_file.nsf_player_nsf_fadeout);
 	}
 
-#if defined (WITH_FFMPEG)
 	if ((group == "recording") || (group == "all")) {
 		int_to_val(SET_REC_AUDIO_FORMAT, cfg_from_file.recording.audio_format);
 		int_to_val(SET_REC_VIDEO_FORMAT, cfg_from_file.recording.video_format);
@@ -980,7 +946,6 @@ void objSet::to_cfg(const QString &group) {
 		int_to_val(SET_REC_USE_EMU_RESOLUTION, cfg_from_file.recording.use_emu_resolution);
 		int_to_val(SET_REC_FOLLOW_ROTATION, cfg_from_file.recording.follow_rotation);
 	}
-#endif
 }
 void objSet::fr_cfg(const QString &group) {
 	if ((group == "system") || (group == "all")) {
@@ -1036,17 +1001,13 @@ void objSet::fr_cfg(const QString &group) {
 		cfg_from_file.input_display = val_to_int(SET_INPUT_DISPLAY);
 		cfg_from_file.disable_tv_noise = val_to_int(SET_DISABLE_TV_NOISE);
 		cfg_from_file.disable_sepia_color= val_to_int(SET_DISABLE_SEPIA_PAUSE);
-#if defined (WITH_OPENGL)
 		cfg_from_file.disable_srgb_fbo = val_to_int(SET_DISABLE_SRGB_FBO);
-#endif
 		cfg_from_file.fullscreen = val_to_int(SET_FULLSCREEN);
 		cfg_from_file.fullscreen_in_window = val_to_int(SET_FULLSCREEN_IN_WINDOW);
 		cfg_from_file.integer_scaling = val_to_int(SET_INTEGER_FULLSCREEN);
 		cfg_from_file.stretch = val_to_int(SET_STRETCH_FULLSCREEN);
-#if defined (FULLSCREEN_RESFREQ)
 		cfg_from_file.adaptive_rrate = val_to_int(SET_ADAPTIVE_RRATE_FULLSCREEN);
 		resolution_val_to_int(SET_RESOLUTION_FULLSCREEN, &cfg_from_file.fullscreen_res_w, &cfg_from_file.fullscreen_res_h);
-#endif
 		cfg_from_file.hflip_screen = val_to_int(SET_HORIZONTAL_FLIP_SCREEN);
 		cfg_from_file.screen_rotation = val_to_int(SET_SCREEN_ROTATION);
 		cfg_from_file.input_rotation = val_to_int(SET_INPUT_ROTATION);
@@ -1075,10 +1036,8 @@ void objSet::fr_cfg(const QString &group) {
 		cfg_from_file.language = val_to_int(SET_GUI_LANGUAGE);
 		cfg_from_file.toolbar.area = val_to_int(SET_GUI_TOOLBAR_AREA);
 		cfg_from_file.toolbar.hidden = val_to_int(SET_GUI_TOOLBAR_HIDDEN);
-#if defined (WITH_FFMPEG)
 		cfg_from_file.recording.last_type = val_to_int(SET_GUI_REC_LAST_TYPE);
 		cpy_val_to_utchar(SET_GUI_REC_LAST_VIDEO_PATH, cfg_from_file.last_rec_video_path, usizeof(cfg_from_file.last_rec_video_path));
-#endif
 		cpy_val_to_utchar(SET_GUI_REC_LAST_AUDIO_PATH, cfg_from_file.last_rec_audio_path, usizeof(cfg_from_file.last_rec_audio_path));
 		cfg_from_file.multiple_instances = val_to_int(SET_GUI_MULTIPLE_INSTANCES);
 	}
@@ -1111,7 +1070,6 @@ void objSet::fr_cfg(const QString &group) {
 		cfg_from_file.nsf_player_nsf_fadeout = val_to_int(SET_NSF_PLAYER_NSF_FADEOUT);
 	}
 
-#if defined (WITH_FFMPEG)
 	if ((group == "recording") || (group == "all")) {
 		cfg_from_file.recording.audio_format = val_to_int(SET_REC_AUDIO_FORMAT);
 		cfg_from_file.recording.video_format = val_to_int(SET_REC_VIDEO_FORMAT);
@@ -1122,16 +1080,13 @@ void objSet::fr_cfg(const QString &group) {
 		cfg_from_file.recording.use_emu_resolution = val_to_int(SET_REC_USE_EMU_RESOLUTION);
 		cfg_from_file.recording.follow_rotation = val_to_int(SET_REC_FOLLOW_ROTATION);
 	}
-#endif
 }
 void objSet::after_the_defaults() {
 	// setto il tipo di sistema
 	machine = machinedb[NTSC - 1];
 
-#if defined (FULLSCREEN_RESFREQ)
 	// setto la modalita'
 	info.old_machine_type = machine.type;
-#endif
 
 	gfx.scale_before_fscreen = cfg_from_file.scale;
 
@@ -1193,7 +1148,6 @@ QString objSet::oscan_val(_overscan_borders *ob) {
 		QString("%1").arg(ob->right));
 }
 
-#if defined (FULLSCREEN_RESFREQ)
 void objSet::resolution_val_to_int(int index, int *w, int *h) {
 	resolution_val_to_int(w, h, uQStringCD(val.at(index)));
 
@@ -1216,7 +1170,6 @@ QString objSet::resolution_val(const int *w, const int *h) {
 	}
 	return (QString("%0x%1").arg((*w)).arg((*h)));
 }
-#endif
 
 void objSet::ntsc_val_to_double(int index, void *ntsc_frmt) {
 	ntsc_val_to_double(ntsc_frmt, uQStringCD(val.at(index)));
@@ -2095,7 +2048,7 @@ int objInp::tb_delay_val_to_int(int index) {
 // -------------------------------- Shaders Parameters -----------------------------------
 
 objShp::objShp(Format f, const QString &file, int list_ele) : objSettings(f, file, list_ele) {
-	int i, param = 0;
+	int i;
 
 	for (i = 0; i < shader_effect.params; i++) {
 		_param_shd *pshd = &shader_effect.param[i];
@@ -2105,7 +2058,6 @@ objShp::objShp(Format f, const QString &file, int list_ele) : objSettings(f, fil
 		}
 
 		val << "";
-		param++;
 	}
 }
 objShp::~objShp() = default;

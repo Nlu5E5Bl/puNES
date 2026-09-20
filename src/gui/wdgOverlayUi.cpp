@@ -35,9 +35,7 @@
 #include "version.h"
 #include "nes.h"
 #include "input/standard_controller.h"
-#if defined (FULLSCREEN_RESFREQ)
 #include "video/gfx_monitor.h"
-#endif
 
 void overlay_info_append_qstring(BYTE alignment, const QString &msg);
 
@@ -246,9 +244,7 @@ void gui_overlay_info_append_msg_precompiled_with_alignment(BYTE alignment, int 
 		case 28: {
 				int w = 0, h = 0, rrate = 0;
 
-#if defined (FULLSCREEN_RESFREQ)
 				gfx_monitor_mode_in_use_info(nullptr, nullptr, &w, &h, &rrate);
-#endif
 				a1 = QString("%1").arg(w);
 				a2 = QString("%1").arg(h);
 				a3 = QString("%1").arg(rrate);

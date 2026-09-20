@@ -32,9 +32,21 @@
 #else
 #define __inline inline __attribute__((always_inline))
 #endif
+// XAudio2 2.9 straight from the toolchain: XAudio2Create() is a real exported
+// function of XAudio2_9.dll.  The DirectX SDK 2.7 header that used to be
+// vendored in extra/windows/DSDK implemented it as an inline
+// CoCreateInstance(CLSCTX_INPROC_SERVER) against a COM class registration; on
+// Windows on ARM that fails with ERROR_BAD_EXE_FORMAT, because the registered
+// in-process server cannot be loaded into an ARM64 process.
+// Device enumeration moved to the MMDevice API, which replaced
+// IXAudio2::GetDeviceCount/GetDeviceDetails in XAudio2 2.8.
 #define INITGUID
-#include <XAudio2.h>
+#define COBJMACROS
+#include <xaudio2.h>
+#include <mmdeviceapi.h>
+#include <functiondiscoverykeys_devpkey.h>
 #include <dsound.h>
+#undef COBJMACROS
 #undef INITGUID
 
 static void _snd_playback_stop(void);
@@ -288,20 +300,14 @@ BYTE snd_playback_start(void) {
 			goto snd_playback_restart;
 		}
 
-		if (index == 0) {
-			if (IXAudio2_CreateMasteringVoice(xaudio2.engine, &xaudio2.master, snd.channels,
-				snd.samplerate, 0, 0, NULL) != S_OK) {
-				gui_warning(uL("Unable to create XAudio2 master voice."));
-				snd_dummy_enabled = TRUE;
-				goto snd_playback_restart;
-			}
-		} else {
-			if (IXAudio2_CreateMasteringVoice(xaudio2.engine, &xaudio2.master, snd.channels,
-				snd.samplerate, 0, index - 1, NULL) != S_OK) {
-				gui_warning(uL("Unable to create XAudio2 master voice."));
-				snd_dummy_enabled = TRUE;
-				goto snd_playback_restart;
-			}
+		// XAudio2 2.8+ selects the output device by its MMDevice id string
+		// instead of by index; a NULL id means "system default".
+		if (IXAudio2_CreateMasteringVoice(xaudio2.engine, &xaudio2.master, snd.channels,
+			snd.samplerate, 0, (index == 0 ? NULL : (LPCWSTR)snd_playback_device_id(index)),
+			NULL, AudioCategory_GameEffects) != S_OK) {
+			gui_warning(uL("Unable to create XAudio2 master voice."));
+			snd_dummy_enabled = TRUE;
+			goto snd_playback_restart;
 		}
 
 		wfm.wFormatTag = WAVE_FORMAT_PCM;
@@ -467,7 +473,8 @@ uTCHAR *snd_capture_device_id(int dev) {
 }
 
 void snd_list_devices(void) {
-	IXAudio2 *ixa2 = NULL;
+	IMMDeviceEnumerator *enumerator = NULL;
+	IMMDeviceCollection *collection = NULL;
 	UINT32 devcount = 0;
 	UINT32 i;
 
@@ -476,15 +483,21 @@ void snd_list_devices(void) {
 	// Playback devices
 	snd_list_device_add(&snd_list.playback, uL("default"), NULL, uL("System Default"));
 
-	if (XAudio2Create(&ixa2, 0, XAUDIO2_DEFAULT_PROCESSOR) != S_OK) {
-		log_error(uL("xaudio2;error on create XAudio2 object"));
+	// IXAudio2::GetDeviceCount and IXAudio2::GetDeviceDetails were removed in
+	// XAudio2 2.8; the MMDevice API is the documented replacement and yields
+	// the same id strings that CreateMasteringVoice now expects.
+	if (CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL, CLSCTX_ALL,
+			&IID_IMMDeviceEnumerator, (void **)&enumerator) != S_OK) {
+		log_error(uL("xaudio2;error on create the device enumerator"));
 		return;
 	}
-	if (IXAudio2_GetDeviceCount(ixa2, &devcount) != S_OK) {
-		IXAudio2_Release(ixa2);
-		log_error(uL("xaudio2;error on count devices"));
+	if (enumerator->lpVtbl->EnumAudioEndpoints(enumerator, eRender, DEVICE_STATE_ACTIVE,
+			&collection) != S_OK) {
+		enumerator->lpVtbl->Release(enumerator);
+		log_error(uL("xaudio2;error on enumerate the playback devices"));
 		return;
 	}
+	collection->lpVtbl->GetCount(collection, &devcount);
 
 	if (!devcount) {
 		log_error(uL("xaudio2;no devices"));
@@ -495,21 +508,45 @@ void snd_list_devices(void) {
 			log_info(uL("xaudio2;%d devices"), devcount);
 		}
 		for (i = 0; i < devcount; i++) {
-			XAUDIO2_DEVICE_DETAILS details;
+			IMMDevice *device = NULL;
+			IPropertyStore *store = NULL;
+			LPWSTR id = NULL;
+			PROPVARIANT desc;
 
-			if (IXAudio2_GetDeviceDetails(ixa2, i, &details) == S_OK) {
-				if (ustrlen(details.DisplayName) == 0) {
-					log_warning_box(uL("%d : DisplayName null or empty"), i);
-					continue;
-				}
-				snd_list_device_add(&snd_list.playback, details.DeviceID, NULL, details.DisplayName);
-				log_info_box(uL("%d : " uPs("")), i, details.DisplayName);
-			} else {
-				log_error_box(uL("%d : error on GetDeviceDetails"), i);
+			PropVariantInit(&desc);
+
+			if (collection->lpVtbl->Item(collection, i, &device) != S_OK) {
+				log_error_box(uL("%d : error on get the device"), i);
+				continue;
 			}
+			if (device->lpVtbl->GetId(device, &id) != S_OK) {
+				device->lpVtbl->Release(device);
+				log_error_box(uL("%d : error on get the device id"), i);
+				continue;
+			}
+			if (device->lpVtbl->OpenPropertyStore(device, STGM_READ, &store) != S_OK) {
+				CoTaskMemFree(id);
+				device->lpVtbl->Release(device);
+				log_error_box(uL("%d : error on open the property store"), i);
+				continue;
+			}
+
+			if ((store->lpVtbl->GetValue(store, &PKEY_Device_FriendlyName, &desc) != S_OK) ||
+				(desc.vt != VT_LPWSTR) || (ustrlen(desc.pwszVal) == 0)) {
+				log_warning_box(uL("%d : DisplayName null or empty"), i);
+			} else {
+				snd_list_device_add(&snd_list.playback, (uTCHAR *)id, NULL, (uTCHAR *)desc.pwszVal);
+				log_info_box(uL("%d : " uPs("")), i, desc.pwszVal);
+			}
+
+			PropVariantClear(&desc);
+			store->lpVtbl->Release(store);
+			CoTaskMemFree(id);
+			device->lpVtbl->Release(device);
 		}
 	}
-	IXAudio2_Release(ixa2);
+	collection->lpVtbl->Release(collection);
+	enumerator->lpVtbl->Release(enumerator);
 
 	// Capture devices
 	if (ds8.available) {

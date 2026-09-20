@@ -16,9 +16,6 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#if !defined (_WIN32)
-#include <string.h>
-#endif
 #include <stdlib.h>
 #include <math.h>
 #include "gui.h"
@@ -139,40 +136,6 @@ BYTE js_is_null(_input_guid *guid) {
 	return (TRUE);
 }
 
-#if !defined (_WIN32)
-void js_guid_create(_js_device *jdev) {
-	WORD *word = (WORD *)&jdev->guid.data;
-
-	js_guid_unset(&jdev->guid);
-
-	(*(word + 0)) = jdev->usb.bustype - 500;
-	(*(word + 1)) = 0 - 100;
-	if (jdev->usb.vendor_id && jdev->usb.product_id) {
-		(*(word + 2)) = jdev->usb.vendor_id;
-		(*(word + 3)) = jdev->usb.vendor_id - 200;
-		(*(word + 4)) = jdev->usb.product_id;
-		(*(word + 5)) = jdev->usb.product_id - 300;
-		(*(word + 6)) = jdev->usb.version;
-		(*(word + 7)) = jdev->usb.version - 400;
-#if defined (__linux__)
-		{
-			BYTE *byte = (BYTE *)&word[2];
-			int idx = 0;
-
-			for (const char *s = jdev->uniq; (*s); ++s) {
-				byte[idx++] ^= (*s);
-				if (idx > 11) {
-					idx = 0;
-				}
-			}
-		}
-#endif
-	} else {
-		word += 2;
-		memcpy((char *)word, (char *)jdev->desc, sizeof(jdev->guid.data) - 4);
-	}
-}
-#endif
 void js_guid_unset(_input_guid *guid) {
 	memset(guid, 0x00, sizeof(_input_guid));
 }
@@ -836,9 +799,6 @@ void js_info_jdev(_js_device *jdev) {
 	int axes = 0, buttons = 0;
 
 	log_info(uL("description;" uPs("")), jdev->desc);
-#if !defined (_WIN32)
-	log_info_box(uL("device;" uPs("")), jdev->dev);
-#endif
 	log_info_box(uL("usb;bustype %04X - vid:pid %04X:%04X - version %04X"),
 		jdev->usb.bustype, jdev->usb.vendor_id, jdev->usb.product_id, jdev->usb.version);
 	log_info_box(uL("gid;" uPs("")), js_guid_to_string(&jdev->guid));

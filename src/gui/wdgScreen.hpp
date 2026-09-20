@@ -26,11 +26,7 @@
 #include <QtGui/QDragEnterEvent>
 #include <QtGui/QDropEvent>
 #include <QtGui/QResizeEvent>
-#if defined (WITH_OPENGL)
 #include "wdgOpenGL.hpp"
-#elif defined (WITH_D3D9)
-#include "wdgD3D9.hpp"
-#endif
 #include "gui.h"
 
 typedef struct _wdgScreen_keyboard_event {
@@ -53,11 +49,7 @@ class wdgScreen final : public QWidget {
 	Q_OBJECT
 
 	public:
-#if defined (WITH_OPENGL)
 		wdgOpenGL *wogl;
-#elif defined (WITH_D3D9)
-		wdgD3D9 *wd3d9;
-#endif
 		struct _events {
 			// mutex per la gestione degli eventi
 			QMutex mutex;

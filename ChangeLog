@@ -23,6 +23,14 @@ Changelog:
 - Default framework switched to Qt6 with improved Wayland compatibility.
 - Refactor GUI : removed hard-coded stylesheets and centralize theme updates.
 - Added a context menu to the emulator window that shows "Recent Roms", the entire "NES" menu and adds "Paste" and "Release/Capture Input" entries for the Family BASIC/Subor keyboard.
+- Removed the nVidia Cg Toolkit dependency: the OpenGL renderer now compiles its GLSL shaders exclusively through the native OpenGL API (no more cg.dll/cgGL.dll).
+- Removed the Direct3D 9 renderer: OpenGL is now the only video backend on every platform.
+- Removed the ".cgp" preset format (it referenced Cg shaders), use the ".glslp" format instead.
+- Removed the code that had become dead after dropping Cg and Direct3D 9 (redundant WITH_OPENGL guards, the unused shader "type" field and its enum, the unused shader/lut macros and tables).
+- Removed the unused vendored Nuked-OPLL sources (the VRC7 audio uses emu2413).
+- Release builds now use -O3 -pipe -flto=auto -fdata-sections -ffunction-sections with -Wl,--gc-sections -Wl,--strip-all.
+- Fixed a VLA (non standard C++) that could exhaust the stack in emu_crc32_zeroes.
+- Fixed two ignored QFile::open() return values and a deprecated Qt6 QApplication::setActiveWindow call.
 
 0.111
 - Rewritten mappers : All.

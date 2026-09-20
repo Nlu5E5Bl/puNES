@@ -19,11 +19,9 @@
 #ifndef INPUT_H_
 #define INPUT_H_
 
-#if defined (_WIN32)
 #define INITGUID
 #include <guiddef.h>
 #undef INITGUID
-#endif
 #include "common.h"
 
 #define TURBO_BUTTON_DELAY_DEFAULT 1
@@ -71,13 +69,7 @@ enum nes_keyboard_misc { NES_KEYBOARD_MAX_KEYS = 105 };
 enum mic_modes { MIC_NONE, MIC_RESET, MIC_STOP };
 enum vk_size { VK_SIZE_10X, VK_SIZE_15X, VK_SIZE_20X, VK_SIZE_25X };
 
-#if defined (_WIN32)
 typedef GUID _input_guid;
-#else
-typedef struct _input_guid {
-	BYTE data[16];
-} _input_guid;
-#endif
 typedef struct _config_input {
 	BYTE permit_updown_leftright;
 	BYTE hide_zapper_cursor;

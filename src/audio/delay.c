@@ -22,9 +22,7 @@
 #include "audio/delay.h"
 #include "audio/channels.h"
 #include "conf.h"
-#if defined (WITH_FFMPEG)
 #include "recording.h"
-#endif
 
 enum delay_channels { CH_LEFT, CH_RIGHT };
 
@@ -145,11 +143,9 @@ void ch_stereo_delay_tick(SWORD value) {
 	snd.cache->samples_available++;
 	snd.cache->bytes_available += (2 * sizeof(*snd.cache->write));
 
-#if defined (WITH_FFMPEG)
 	if (info.recording_on_air) {
 		recording_audio_tick(&actual[0]);
 	}
-#endif
 }
 void ch_stereo_delay_set(void) {
 	SWORD *here;

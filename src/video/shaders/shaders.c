@@ -21,20 +21,13 @@
 #include "shdcode.h"
 #include "video/gfx.h"
 #include "conf.h"
-#include "cgp.h"
+#include "shd_preset.h"
 #include "emu.h"
 
 #define SHDCODE(index) (char *)shader_code[index].code
-#define LUTCODE(index) lut_resource[index].code
-#define SPALIAS(a) strncpy(sp->alias, a, sizeof(sp->alias))
-#define LPPATH(a) strncpy(lp->path, LUTCODE(a), sizeof(lp->path))
-#define LPNAME(a) strncpy(lp->name, a, sizeof(lp->name))
-#define PRMNAME(a) strncpy(prm->name, a, sizeof(prm->name))
 
 #define _shdpass(a) sp = &se->sp[a]; type = &sp->sc.type; scale = &sp->sc.scale; abs = &sp->sc.abs
 #define shdpass() _shdpass(se->pass++)
-#define lutpass() lp = &se->lp[se->luts++]
-#define prmshd(a, b) prm = &se->param[se->params++]; PRMNAME(a); prm->value = b
 
 static void sp_set_default(_shader_pass *sp);
 static void lp_set_default(_lut_pass *lp);
@@ -49,8 +42,6 @@ BYTE shaders_set(int shader) {
 	_xy_uint *type = NULL;
 	_xy_float *scale = NULL;
 	_xy_uint *abs = NULL;
-	//_lut_pass *lp = NULL;
-	//_param_shd *prm = NULL;
 	int i;
 
 	shader_se_set_default(&shader_effect);
@@ -140,7 +131,7 @@ BYTE shaders_set(int shader) {
 			se_soft_stretch();
 			break;
 		case SHADER_FILE:
-			if (cgp_parse(cfg->shader_file) == EXIT_ERROR) {
+			if (shd_preset_parse(cfg->shader_file) == EXIT_ERROR) {
 				return (EXIT_ERROR);
 			}
 			break;
@@ -164,7 +155,7 @@ BYTE shaders_set(int shader) {
 	// pragma parameters
 	for (i = 0; i < se->pass; i++) {
 		_shdpass(i);
-		if (cgp_pragma_param(sp->code, sp->path) == EXIT_ERROR) {
+		if (shd_pragma_param(sp->code, sp->path) == EXIT_ERROR) {
 			return (EXIT_ERROR);
 		}
 	}
@@ -173,8 +164,6 @@ BYTE shaders_set(int shader) {
 }
 void shader_se_set_default(_shader_effect *se) {
 	unsigned int i;
-
-	se->type = MS_MEM;
 
 	se->pass = se->last_pass = se->running_pass = 0;
 	for (i = 0; i < LENGTH(se->sp); i++) {
@@ -202,7 +191,6 @@ static void sp_set_default(_shader_pass *sp) {
 	_xy_float *scale = &sp->sc.scale;
 	_xy_uint *abs = &sp->sc.abs;
 
-	sp->type = MS_MEM;
 	sp->code = NULL;
 	memset(sp->path, 0x00, sizeof(sp->path));
 	memset(sp->alias, 0x00, sizeof(sp->alias));

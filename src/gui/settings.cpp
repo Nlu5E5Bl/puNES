@@ -17,14 +17,9 @@
  */
 
 #include <QtCore/QFileInfo>
-#if defined (WITH_OPENGL)
 #include "opengl.h"
-#endif
 #include "objSettings.hpp"
 #include "conf.h"
-#if defined (WITH_D3D9)
-#include "d3d9.h"
-#endif
 #include "gui.h"
 
 #define PGSFILENAME QString(PERGAME_FOLDER) + "/" +\
@@ -76,11 +71,9 @@ void settings_cpy_utchar_to_val(const int index, uTCHAR *buffer) {
 void settings_val_to_oscan(const int index, _overscan_borders *ob, const uTCHAR *buffer) {
 	s.set->oscan_val_to_int(index, ob, buffer);
 }
-#if defined (FULLSCREEN_RESFREQ)
 void settings_resolution_val_to_int(int *w, int *h, const uTCHAR *buffer) {
 	s.set->resolution_val_to_int(w, h, buffer);
 }
-#endif
 
 void *settings_inp_rd_sc(const int index, const int type) {
 	return (s.inp->sc_val_to_qstring_pntr(index, type));

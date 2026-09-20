@@ -61,10 +61,8 @@ static struct _cl_option {
 	{ "fullscreen",            req_arg, "u"},
 	{ "int-scl-fullscreen",    req_arg, "r"},
 	{ "stretch-fullscreen",    req_arg, "t"},
-#if defined (FULLSCREEN_RESFREQ)
 	{ "adaptive-rrate",        req_arg,  nullptr },
 	{ "fullscreen-res",        req_arg,  nullptr },
-#endif
 	{ "hflip-screen",          req_arg,  nullptr },
 	{ "screen-rotation",       req_arg,  nullptr },
 	{ "audio",                 req_arg, "a"},
@@ -83,9 +81,7 @@ static struct _cl_option {
 	{ "input-display",         req_arg,  nullptr },
 	{ "disable-tv-noise",      req_arg,  nullptr },
 	{ "disable-sepia",         req_arg,  nullptr },
-#if defined (WITH_OPENGL)
 	{ "disable-srgb-fbo",      req_arg,  nullptr },
-#endif
 	{ "overscan-brd-ntsc",     req_arg,  nullptr },
 	{ "overscan-brd-pal",      req_arg,  nullptr },
 	{ "par-soft-stretch",      req_arg,  nullptr },
@@ -181,10 +177,8 @@ BYTE cmd_line_parse(int argc, uTCHAR **argv) {
 					set_int(cfg_from_file.disable_tv_noise, SET_DISABLE_TV_NOISE)
 				} else if (key == "disable-sepia") {
 					set_int(cfg_from_file.disable_sepia_color, SET_DISABLE_SEPIA_PAUSE)
-#if defined (WITH_OPENGL)
 				} else if (key == "disable-srgb-fbo") {
 					set_int(cfg_from_file.disable_srgb_fbo, SET_DISABLE_SRGB_FBO)
-#endif
 				} else if (key == "overscan-brd-ntsc") {
 					set_oscan(SET_OVERSCAN_BRD_NTSC, 0);
 				} else if (key == "overscan-brd-pal") {
@@ -215,12 +209,10 @@ BYTE cmd_line_parse(int argc, uTCHAR **argv) {
 					set_int(cfg_from_file.oscan_black_borders_fscr, SET_OVERSCAN_BLACK_BORDERS_FSCR)
 				} else if (key == "rewind-minutes") {
 					set_int(cfg_from_file.rewind_minutes, SET_REWIND_MINUTES)
-#if defined (FULLSCREEN_RESFREQ)
 				} else if (key == "adaptive-rrate") {
 					set_int(cfg_from_file.adaptive_rrate, SET_ADAPTIVE_RRATE_FULLSCREEN)
 				} else if (key == "fullscreen-res") {
 					settings_resolution_val_to_int(&cfg_from_file.fullscreen_res_w, &cfg_from_file.fullscreen_res_h, oarg);
-#endif
 				} else if (key == "hidden-gui") {
 					info.start_with_hidden_gui = TRUE;
 				} else if (key.startsWith("shortcut.")) {

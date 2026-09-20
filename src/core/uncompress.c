@@ -18,33 +18,15 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <libgen.h>
-#if defined (__OpenBSD__)
-#include <stdio.h>
-#endif
 #include "info.h"
 #include "c++/l7zip/l7z.h"
 #include "gui.h"
-#if defined (__unix__)
-#define MINIZ_NO_ARCHIVE_WRITING_APIS
-#define MINIZ_NO_TIME
-#include "miniz.h"
-#undef MINIZ_NO_TIME
-#undef MINIZ_NO_ARCHIVE_WRITING_APIS
-#endif
 
 static uTCHAR *uncompress_storage_index_file_name(uint32_t index);
 
 static BYTE (*uncompress_examine_archive)(_uncompress_archive *archive);
 static BYTE (*uncompress_extract_from_archive)(_uncompress_archive *archive, uint32_t selected, BYTE type);
 static uTCHAR *(*uncompress_item_file_name)(_uncompress_archive *archive, uint32_t selected, BYTE type);
-
-#if defined (__unix__)
-// zip
-static BYTE mz_zip_examine_archive(_uncompress_archive *archive);
-static BYTE mz_zip_extract_from_archive(_uncompress_archive *archive, uint32_t selected, BYTE type);
-static char *mz_zip_item_file_name(_uncompress_archive *archive, uint32_t selected, BYTE type);
-#endif
 
 _uncompress_storage uncstorage;
 
@@ -87,12 +69,6 @@ _uncompress_archive *uncompress_archive_alloc(uTCHAR *file, BYTE *rc) {
 		uncompress_examine_archive = l7z_examine_archive;
 		uncompress_extract_from_archive = l7z_extract_from_archive;
 		uncompress_item_file_name = l7z_item_file_name;
-#if defined (__unix__)
-	} else if (!ustrcasecmp(ext, uL(".zip"))) {
-		uncompress_examine_archive = mz_zip_examine_archive;
-		uncompress_extract_from_archive = mz_zip_extract_from_archive;
-		uncompress_item_file_name = mz_zip_item_file_name;
-#endif
 	} else {
 		(*rc) = UNCOMPRESS_EXIT_IS_NOT_COMP;
 		return (NULL);
@@ -288,150 +264,3 @@ static uTCHAR *uncompress_storage_index_file_name(uint32_t index) {
 	return (sitem->file);
 }
 
-#if defined (__unix__)
-static BYTE mz_zip_examine_archive(_uncompress_archive *archive) {
-	mz_zip_archive mzarchive;
-	unsigned int a = 0;
-
-	memset(&mzarchive, 0x00, sizeof(mzarchive));
-
-	if (!mz_zip_reader_init_file(&mzarchive, archive->file, 0)) {
-		log_error(uL("uncompress;mz_zip_reader_init_file() failed!"));
-		return (UNCOMPRESS_EXIT_ERROR_ON_UNCOMP);
-	}
-
-	for (a = 0; a < mz_zip_reader_get_num_files(&mzarchive); a++) {
-		mz_zip_archive_file_stat file_stat;
-		unsigned int b = 0;
-
-		if (!mz_zip_reader_file_stat(&mzarchive, a, &file_stat)) {
-			log_error(uL("uncompress;mz_zip_reader_file_stat() failed!"));
-			mz_zip_reader_end(&mzarchive);
-			return (UNCOMPRESS_EXIT_ERROR_ON_UNCOMP);
-		}
-
-		// se e' una directory continuo
-		if (mz_zip_reader_is_file_a_directory(&mzarchive, a)) {
-			continue;
-		}
-
-		for (b = 0; b < LENGTH(uncompress_exts); b++) {
-			char *ext = strrchr(file_stat.m_filename, '.');
-
-			if (ext && !strcasecmp(ext, (uTCHAR *)uncompress_exts[b].e)) {
-				_uncompress_archive_items_list *list = &archive->list;
-				_uncompress_archive_item *item = NULL;
-				BYTE found = FALSE;
-
-				if (uncompress_exts[b].type & UNCOMPRESS_TYPE_ROM) {
-					archive->rom.count++;
-					found = TRUE;
-				}
-				if (uncompress_exts[b].type & UNCOMPRESS_TYPE_FLOPPY_DISK) {
-					archive->floppy_disk.count++;
-					found = TRUE;
-				}
-				if (uncompress_exts[b].type & UNCOMPRESS_TYPE_PATCH) {
-					archive->patch.count++;
-					found = TRUE;
-				}
-				if (!found) {
-					continue;
-				}
-
-				item = (_uncompress_archive_item *)realloc(list->item, (list->count + 1) * sizeof(_uncompress_archive_item));
-				if (item) {
-					_uncompress_archive_item *aitem = NULL;
-
-					list->item = item;
-					aitem = &list->item[list->count];
-					aitem->type = uncompress_exts[b].type;
-					aitem->index = file_stat.m_file_index;
-					list->count++;
-					break;
-				}
-			}
-		}
-	}
-
-	mz_zip_reader_end(&mzarchive);
-
-	return (UNCOMPRESS_EXIT_OK);
-}
-static BYTE mz_zip_extract_from_archive(_uncompress_archive *archive, uint32_t selected, BYTE type) {
-	mz_zip_archive mzarchive;
-	char file[LENGTH_FILE_NAME_LONG], basename[255];
-	_uncompress_archive_item *aitem = NULL;
-
-	aitem = uncompress_archive_find_item(archive, selected, type);
-	if (!aitem) {
-		return (UNCOMPRESS_EXIT_ERROR_ON_UNCOMP);
-	}
-
-	memset(&mzarchive, 0x00, sizeof(mzarchive));
-
-	if (!mz_zip_reader_init_file(&mzarchive, archive->file, 0)) {
-		log_error(uL("uncompress;mz_zip_reader_init_file() failed!"));
-		return (UNCOMPRESS_EXIT_ERROR_ON_UNCOMP);
-	}
-
-	mz_zip_reader_get_filename(&mzarchive, aitem->index, file, sizeof(file));
-
-	gui_utf_basename(&file[0], basename, sizeof(basename));
-	snprintf(file, sizeof(file), "%s/%s", gui_temp_folder(), basename);
-
-	if (!mz_zip_reader_extract_to_file(&mzarchive, aitem->index, file, 0)) {
-		log_error(uL("uncompress;unzip file failed!"));
-		// Close the archive, freeing any resources it was using
-		mz_zip_reader_end(&mzarchive);
-		return (UNCOMPRESS_EXIT_ERROR_ON_UNCOMP);
-	}
-
-	{
-		uint32_t storage_index = uncompress_storage_add_to_list(archive, aitem, file);
-
-		switch (type) {
-			default:
-			case UNCOMPRESS_TYPE_ALL:
-			case UNCOMPRESS_TYPE_ROM:
-				archive->rom.storage_index = storage_index;
-				break;
-			case UNCOMPRESS_TYPE_FLOPPY_DISK:
-				archive->floppy_disk.storage_index = storage_index;
-				break;
-			case UNCOMPRESS_TYPE_PATCH:
-				archive->patch.storage_index = storage_index;
-				break;
-		}
-	}
-
-	// Close the archive, freeing any resources it was using
-	mz_zip_reader_end(&mzarchive);
-
-	return (UNCOMPRESS_EXIT_OK);
-}
-static char *mz_zip_item_file_name(_uncompress_archive *archive, uint32_t selected, BYTE type) {
-	static char file[LENGTH_FILE_NAME_LONG];
-	mz_zip_archive mzarchive;
-	_uncompress_archive_item *aitem = NULL;
-
-	aitem = uncompress_archive_find_item(archive, selected, type);
-	if (!aitem) {
-		return (NULL);
-	}
-
-	memset(&mzarchive, 0x00, sizeof(mzarchive));
-
-	if (!mz_zip_reader_init_file(&mzarchive, archive->file, 0)) {
-		log_error(uL("uncompress;mz_zip_reader_init_file() failed!"));
-		return (NULL);
-	}
-
-	mz_zip_reader_get_filename(&mzarchive, aitem->index, file, sizeof(file));
-
-	// Close the archive, freeing any resources it was using
-	mz_zip_reader_end(&mzarchive);
-
-	return (&file[0]);
-}
-#endif

@@ -86,15 +86,9 @@ uTCHAR *gamegenie_check_rom_present(BYTE print_message) {
 	// 3) directory contenente la rom nes
 	ustrncpy(gg_rom_file, info.rom.file, usizeof(gg_rom_file));
 	// rintraccio l'ultimo '.' nel nome
-#if defined (_WIN32)
 	if ((lastSlash = ustrrchr(gg_rom_file, uL('\\')))) {
 		(*(lastSlash + 1)) = 0x00;
 	}
-#else
-	if ((lastSlash = ustrrchr(gg_rom_file, uL('/')))) {
-		(*(lastSlash + 1)) = 0x00;
-	}
-#endif
 	// aggiungo il nome del file
 	ustrcat(gg_rom_file, uL("" GGFILE));
 	if (emu_file_exist(gg_rom_file) == EXIT_OK) {

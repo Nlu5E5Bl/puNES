@@ -21,7 +21,6 @@
 
 #include "common.h"
 
-enum meta_shader_type { MS_MEM, MS_CGP, MS_GLSLP };
 enum max_pass { MAX_PASS = 24, MAX_PREV = 7, MAX_PARAM = 128 };
 enum texture_wrap_type {
 	TEXTURE_WRAP_BORDER,
@@ -59,8 +58,6 @@ typedef struct _shader_scale {
 	_xy_uint abs;
 } _shader_scale;
 typedef struct _shader_pass {
-	uint8_t type;
-
 	char *code;
 	uTCHAR path[LENGTH_FILE_NAME_LONG];
 	char alias[64];
@@ -93,8 +90,6 @@ typedef struct _param_shd {
 	float step;
 } _param_shd;
 typedef struct _shader_effect {
-	uint8_t type;
-
 	uint8_t pass;
 	uint8_t last_pass;
 	uint8_t running_pass;

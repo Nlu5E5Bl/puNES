@@ -282,17 +282,10 @@ BYTE fds_load_bios(void) {
 	umemset(fds.bios.file, 0x00, usizeof(fds.bios.file));
 	ustrncpy(fds.bios.file, info.rom.file, usizeof(fds.bios.file));
 	// rintraccio l'ultimo '.' nel nome
-#if defined (_WIN32)
 	lastSlash = ustrrchr(fds.bios.file, uL('\\'));
 	if (lastSlash) {
 		(*(lastSlash + 1)) = 0x00;
 	}
-#else
-	lastSlash = ustrrchr(fds.bios.file, uL('/'));
-	if (lastSlash) {
-		(*(lastSlash + 1)) = 0x00;
-	}
-#endif
 	// aggiungo il nome del file
 	ustrcat(fds.bios.file, uL("" BIOSFILE));
 	bios = ufopen(fds.bios.file, uL("rb"));

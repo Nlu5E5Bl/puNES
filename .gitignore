@@ -135,15 +135,13 @@ install-sh
 ltmain.sh
 missing
 src/gui/designer/translations/*.qm
-!src/extra/lib7zip-53abfeb/configure
-!src/extra/windows/ffmpeg/src/*
-!src/extra/windows/ffmpeg/lib/*.a
-!src/extra/windows/ffmpeg/lib.x64/*.a
 .dirstamp
 .deps
 Makefile
 
 build/
+.build*/
+build*/
 _build/
 .idea/
 CMakeLists.txt.user

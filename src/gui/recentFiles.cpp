@@ -37,8 +37,7 @@ void recentFiles::init(const QString &recent_file_name) {
 	file.setFileName(file_name);
 
 	// se non esiste lo creo
-	if (!file.exists()) {
-		file.open(QIODevice::WriteOnly);
+	if (!file.exists() && file.open(QIODevice::WriteOnly)) {
 		file.close();
 	}
 }

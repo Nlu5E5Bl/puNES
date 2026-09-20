@@ -103,13 +103,9 @@ dlgCmdLineHelp::dlgCmdLineHelp(QWidget *parent, const QString &name) : QWidget(p
 			uL("" uPs("") "\n")
 			uL("" uPs("") "\n")
 			uL("" uPs("") "\n")
-			#if defined (WITH_OPENGL)
-			uL("" uPs("") "\n")
-			#endif
-			#if defined (FULLSCREEN_RESFREQ)
 			uL("" uPs("") "\n")
 			uL("" uPs("") "\n")
-			#endif
+			uL("" uPs("") "\n")
 			uL("" uPs("") "\n")
 			uL("" uPs("") "\n")
 	};
@@ -151,19 +147,15 @@ dlgCmdLineHelp::dlgCmdLineHelp(QWidget *parent, const QString &name) : QWidget(p
 			  main_cfg[SET_INPUT_DISPLAY].hlp,
 			  main_cfg[SET_DISABLE_TV_NOISE].hlp,
 			  main_cfg[SET_DISABLE_SEPIA_PAUSE].hlp,
-#if defined (WITH_OPENGL)
 			  main_cfg[SET_DISABLE_SRGB_FBO].hlp,
-#endif
 			  main_cfg[SET_OVERSCAN_BRD_NTSC].hlp,
 			  main_cfg[SET_OVERSCAN_BRD_PAL].hlp,
 			  main_cfg[SET_FULLSCREEN].hlp,
 			  main_cfg[SET_FULLSCREEN_IN_WINDOW].hlp,
 			  main_cfg[SET_INTEGER_FULLSCREEN].hlp,
 			  main_cfg[SET_STRETCH_FULLSCREEN].hlp,
-#if defined (FULLSCREEN_RESFREQ)
 			  main_cfg[SET_ADAPTIVE_RRATE_FULLSCREEN].hlp,
 			  main_cfg[SET_RESOLUTION_FULLSCREEN].hlp,
-#endif
 			  main_cfg[SET_HORIZONTAL_FLIP_SCREEN].hlp,
 			  main_cfg[SET_SCREEN_ROTATION].hlp,
 			  main_cfg[SET_AUDIO_OUTPUT_DEVICE].hlp,

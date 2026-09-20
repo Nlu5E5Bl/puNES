@@ -27,7 +27,7 @@
 #endif
 
 // define endianess and some integer data types
-#if defined(_MSC_VER) || defined(__MINGW32__)
+#if defined(_MSC_VER) || defined(__MINGW32__) || defined(_WIN32)
   // Windows always little endian
   #define __BYTE_ORDER __LITTLE_ENDIAN
 
@@ -43,14 +43,7 @@
     #endif
   #endif
 #else
-  // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
-  #if defined (__OpenBSD__)
-    #include <endian.h>
-  #elif defined (__FreeBSD__)
-    #include <sys/endian.h>
-  #else
-    #include <sys/param.h>
-  #endif
+  #include <sys/param.h>
 
   #ifndef __BYTE_ORDER
     #if defined(_BYTE_ORDER)

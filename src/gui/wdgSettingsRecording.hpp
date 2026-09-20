@@ -30,7 +30,6 @@ class wdgSettingsRecording : public QWidget, public Ui::wdgSettingsRecording {
 		explicit wdgSettingsRecording(QWidget *parent = nullptr);
 		~wdgSettingsRecording() override;
 
-#if defined (WITH_FFMPEG)
 	private:
 		void changeEvent(QEvent *event) override;
 		void showEvent(QShowEvent *event) override;
@@ -87,7 +86,6 @@ class wdgRecGetSaveFileName: public QFileDialog {
 		void s_output_audio_format(int index);
 		void s_output_video_format(int index);
 		void s_output_quality(int index);
-#endif
 };
 
 #endif /* WDGSETTINGSRECORDING_HPP_ */

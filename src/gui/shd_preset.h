@@ -16,28 +16,20 @@
  *  Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, USA.
  */
 
-#include <string.h>
-#include "crc.h"
-#include "Crc32.h"
+#ifndef SHD_PRESET_H_
+#define SHD_PRESET_H_
 
-uint32_t emu_crc32(const void *data, size_t length) {
-	return (crc32_fast(data, length));
-}
-uint32_t emu_crc32_continue(const void *data, size_t length, uint32_t previous) {
-	return (crc32_fast(data, length, previous));
-}
-uint32_t emu_crc32_zeroes(size_t length, uint32_t previous) {
-	// Un buffer di zeri allocato sullo stack (VLA) non e' C++ standard e con
-	// lunghezze grandi puo' far esplodere lo stack, quindi procedo a blocchi.
-	static const BYTE zeroes[4096] = { 0 };
-	uint32_t crc = previous;
+#include "common.h"
 
-	while (length) {
-		const size_t chunk = (length < sizeof(zeroes)) ? length : sizeof(zeroes);
+#if defined (__cplusplus)
+#define EXTERNC extern "C"
+#else
+#define EXTERNC
+#endif
 
-		crc = crc32_fast(zeroes, chunk, crc);
-		length -= chunk;
-	}
+EXTERNC BYTE shd_preset_parse(const uTCHAR *file);
+EXTERNC BYTE shd_pragma_param(const char *code, const uTCHAR *path);
 
-	return (crc);
-}
+#undef EXTERNC
+
+#endif /* SHD_PRESET_H_ */

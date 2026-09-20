@@ -200,8 +200,8 @@ void nsf_info(void) {
 	log_info_box(uL("artist;" uPs("") ""), nsf.info.artist);
 	log_info_box(uL("copyright;" uPs("") ""), nsf.info.copyright);
 	log_info_box(uL("ripper;" uPs("") ""), nsf.info.ripper);
-	log_info_box(uL("text;%s"), nsf.info.text ? "yes" : "no");
-	log_info_box(uL("region;supported %s%s%s%s"),
+	log_info_box(uL("text;" uPc("")), nsf.info.text ? "yes" : "no");
+	log_info_box(uL("region;supported " uPc("") uPc("") uPc("") uPc("")),
 		nsf.region.supported & 0x01 ? "NTSC" : "",
 		nsf.region.supported & 0x02 ? nsf.region.supported & 0x01 ? "/PAL" : "PAL" : "",
 		nsf.region.supported & 0x04 ? nsf.region.supported & 0x03 ? "/Dendy" : "Dendy" : "",
@@ -210,9 +210,9 @@ void nsf_info(void) {
 			: nsf.region.preferred == NSF_PAL_MODE ? ", preferred PAL"
 			: nsf.region.preferred == NSF_DENDY_MODE ? ", preferred Dendy"
 			: ", preferred unknown");
-	log_info_box(uL("irq support;%s"), nsf2.features.irq_support ? "yes" : "no");
-	log_info_box(uL("non-ret INIT;%s"), nsf2.features.non_returning_init ? "yes" : "no");
-	log_info_box(uL("disable PLAY;%s"), nsf2.features.suppressed_PLAY ? "yes" : "no");
+	log_info_box(uL("irq support;" uPc("")), nsf2.features.irq_support ? "yes" : "no");
+	log_info_box(uL("non-ret INIT;" uPc("")), nsf2.features.non_returning_init ? "yes" : "no");
+	log_info_box(uL("disable PLAY;" uPc("")), nsf2.features.suppressed_PLAY ? "yes" : "no");
 	if (nsf.playlist.count) {
 		log_info_box_open(uL("playlist;"));
 		for (uint32_t tmp = 0; tmp < nsf.playlist.count; tmp++) {

@@ -33,9 +33,7 @@
 #include "palette.h"
 #include "nes.h"
 #include "fds.h"
-#if defined (WITH_FFMPEG)
 #include "recording.h"
-#endif
 
 #if defined (_WIN32)
 #define NEWLINE "\r\n"
@@ -86,17 +84,13 @@ enum set_element {
 	SET_INPUT_DISPLAY,
 	SET_DISABLE_TV_NOISE,
 	SET_DISABLE_SEPIA_PAUSE,
-#if defined (WITH_OPENGL)
 	SET_DISABLE_SRGB_FBO,
-#endif
 	SET_FULLSCREEN,
 	SET_FULLSCREEN_IN_WINDOW,
 	SET_INTEGER_FULLSCREEN,
 	SET_STRETCH_FULLSCREEN,
-#if defined (FULLSCREEN_RESFREQ)
 	SET_ADAPTIVE_RRATE_FULLSCREEN,
 	SET_RESOLUTION_FULLSCREEN,
-#endif
 	SET_HORIZONTAL_FLIP_SCREEN,
 	SET_SCREEN_ROTATION,
 	SET_INPUT_ROTATION,
@@ -119,10 +113,8 @@ enum set_element {
 	SET_GUI_LANGUAGE,
 	SET_GUI_TOOLBAR_AREA,
 	SET_GUI_TOOLBAR_HIDDEN,
-#if defined (WITH_FFMPEG)
 	SET_GUI_REC_LAST_TYPE,
 	SET_GUI_REC_LAST_VIDEO_PATH,
-#endif
 	SET_GUI_REC_LAST_AUDIO_PATH,
 	SET_GUI_MULTIPLE_INSTANCES,
 	SET_APU_MASTER,
@@ -148,7 +140,6 @@ enum set_element {
 	SET_FDS_DISK1SIDEA_AT_RESET,
 	SET_FDS_SWITCH_SIDE_AUTOMATICALLY,
 	SET_FDS_FAST_FORWARD,
-#if defined (WITH_FFMPEG)
 	SET_REC_AUDIO_FORMAT,
 	SET_REC_VIDEO_FORMAT,
 	SET_REC_QUALITY,
@@ -157,7 +148,6 @@ enum set_element {
 	SET_REC_OUTPUT_CUSTOM_HEIGHT,
 	SET_REC_USE_EMU_RESOLUTION,
 	SET_REC_FOLLOW_ROTATION,
-#endif
 	SET_ONLYCMDLINE_HIDDEN_GUI
 };
 enum pgs_element {
@@ -181,9 +171,7 @@ enum inp_element {
 	SET_INP_SC_EJECT_DISK,
 	SET_INP_SC_CHANGE_DISK,
 	SET_INP_SC_REC_AUDIO,
-#if defined (WITH_FFMPEG)
 	SET_INP_SC_REC_VIDEO,
-#endif
 	SET_INP_SC_FULLSCREEN,
 	SET_INP_SC_SCREENSHOT,
 	SET_INP_SC_SCREENSHOT_1X,
@@ -703,7 +691,6 @@ static const _opt opt_nsf_player_effect[] = {
 	{NULL, uL("hanning")    , NSF_EFFECT_HANNING},
 	{NULL, uL("hannig full"), NSF_EFFECT_HANNING_FULL}
 };
-#if defined (WITH_FFMPEG)
 static const _opt opt_recording_format_type[] = {
 	{NULL, uL("video"), REC_FORMAT_VIDEO},
 	{NULL, uL("audio"), REC_FORMAT_AUDIO}
@@ -753,7 +740,6 @@ static const _opt opt_recording_output_resolution[] = {
 	{NULL, uL("1280x720") , REC_RES_1280x720},
 	{NULL, uL("1920x1080"), REC_RES_1920x1080}
 };
-#endif
 static const _opt opt_cpuppu_aligment[] = {
 	{NULL, uL("default")           , PPU_ALIGMENT_DEFAULT},
 	{NULL, uL("randomize")         , PPU_ALIGMENT_RANDOMIZE},
@@ -1110,7 +1096,6 @@ static const _settings main_cfg[] = {
 		uL("                               during the pause"),
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#if defined (WITH_OPENGL)
 	{
 		uL("video"), uL("disable sRGB FBO (Shaders)"), uL("no"),
 		uL("# possible values: yes, no"),
@@ -1119,7 +1104,6 @@ static const _settings main_cfg[] = {
 		uL("                               sRGB FBO"),
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#endif
 	{
 		uL("video"), uL("fullscreen"), uL("no"),
 		uL("# possible values: yes, no"),
@@ -1146,7 +1130,6 @@ static const _settings main_cfg[] = {
 		uL("-t, --stretch-fullscreen       stretch image         : yes, no"),
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#if defined (FULLSCREEN_RESFREQ)
 	{
 		uL("video"), uL("adaptive refresh rate in fullscreen"), uL("no"),
 		uL("# possible values: yes, no"),
@@ -1161,7 +1144,6 @@ static const _settings main_cfg[] = {
 		uL("                               if supported by the monitor"),
 		{0, NULL}
 	},
-#endif
 	{
 		uL("video"), uL("horizontal flip screen"), uL("no"),
 		uL("# possible values: yes, no"),
@@ -1188,13 +1170,8 @@ static const _settings main_cfg[] = {
 	},
 	{
 		uL("audio"), uL("output device"), uL("default"),
-#if defined(__linux__)
-		uL("# possible values: default, plughw:[x,x]"),
-		uL("    --audio-output-device                            : default, plughw:[x,x]"),
-# else
 		uL("# possible values: default, [DEVICEID]"),
 		uL("    --audio-output-device                       : default, [DEVICEID]"),
-#endif
 		{0, NULL}
 	},
 	{
@@ -1304,7 +1281,6 @@ static const _settings main_cfg[] = {
 		NULL,
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#if defined (WITH_FFMPEG)
 	{
 		uL("GUI"), uL("last recording type"), uL("audio"),
 		uL("# possible values: video, audio"),
@@ -1317,7 +1293,6 @@ static const _settings main_cfg[] = {
 		NULL,
 		{0, NULL}
 	},
-#endif
 	{
 		uL("GUI"), uL("last audio recording path"), NULL,
 		uL("# possible values: [PATH]"),
@@ -1468,7 +1443,6 @@ static const _settings main_cfg[] = {
 		NULL,
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#if defined (WITH_FFMPEG)
 	{
 		uL("recording"), uL("audio format"), uL("wav"),
 		uL("# possible values: wav, mp3, aac, flac, ogg, opus"),
@@ -1519,7 +1493,6 @@ static const _settings main_cfg[] = {
 		NULL,
 		{LENGTH(opt_no_yes), opt_no_yes}
 	},
-#endif
 	// opzioni da sola riga di comando
 	{
 		NULL, NULL, NULL,
@@ -1591,9 +1564,7 @@ static const _settings inp_cfg[] = {
 	{uL("shortcuts"), uL("eject disk"),                    uL("Alt+E,NULL"),        NULL, NULL, {0, NULL}},
 	{uL("shortcuts"), uL("change disk"),                   uL("Alt+D,NULL"),        NULL, NULL, {0, NULL}},
 	{uL("shortcuts"), uL("start or stop audio recording"), uL("CTRL+A,NULL"),       NULL, NULL, {0, NULL}},
-#if defined (WITH_FFMPEG)
 	{uL("shortcuts"), uL("start or stop video recording"), uL("CTRL+V,NULL"),       NULL, NULL, {0, NULL}},
-#endif
 	{uL("shortcuts"), uL("video fullscreen"),              uL("Alt+Return,NULL"),   NULL, NULL, {0, NULL}},
 	{uL("shortcuts"), uL("save screenshot"),               uL("Alt+X,NULL"),        NULL, NULL, {0, NULL}},
 	{uL("shortcuts"), uL("save unalterd nes screen"),      uL("Alt+Z,NULL"),        NULL, NULL, {0, NULL}},
@@ -2042,9 +2013,7 @@ EXTERNC int settings_val_to_int(int index, const uTCHAR *buffer);
 EXTERNC double settings_val_to_double(WORD round, const uTCHAR *buffer);
 EXTERNC void settings_cpy_utchar_to_val(int index, uTCHAR *buffer);
 EXTERNC void settings_val_to_oscan(int index, _overscan_borders *ob, const uTCHAR *buffer);
-#if defined (FULLSCREEN_RESFREQ)
 EXTERNC void settings_resolution_val_to_int(int *w, int *h, const uTCHAR *buffer);
-#endif
 
 EXTERNC void *settings_inp_rd_sc(int index, int type);
 EXTERNC void settings_inp_wr_sc(void *str, int index, int type);

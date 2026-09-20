@@ -33,11 +33,7 @@
 #include "video/filters/xBRZ.h"
 
 //#define FH_SHADERS_GEST
-#if defined (__unix__)
-#define	gfx_os_color(r, g, b) gfx_color(0, r, g, b);
-#else
 #define	gfx_os_color(r, g, b) gfx_color(255, r, g, b);
-#endif
 
 enum fullscreen_type { NO_FULLSCR, FULLSCR, FULLSCR_IN_WINDOW };
 enum scale_type { X1 = 1, X2, X3, X4, X5, X6, X8 = 8 };
@@ -132,10 +128,6 @@ typedef struct _gfx {
 	uTCHAR last_shader_file[LENGTH_FILE_NAME_LONG];
 	_viewport vp;
 	BYTE filter_linear;
-	BYTE only_fullscreen_in_window;
-	struct _wayland {
-		BYTE enabled;
-	} wayland;
 	struct _gfx_frame {
 		uint64_t totals;
 		uint64_t filtered;

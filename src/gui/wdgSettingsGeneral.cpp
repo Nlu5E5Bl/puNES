@@ -357,10 +357,8 @@ void wdgSettingsGeneral::s_mode(bool checked) {
 			reset = FALSE;
 		}
 
-#if defined (FULLSCREEN_RESFREQ)
 		// mi salvo la vecchia modalita'
 		info.old_machine_type = machine.type;
-#endif
 
 		// setto il tipo di sistema
 		machine = machinedb[mode - 1];

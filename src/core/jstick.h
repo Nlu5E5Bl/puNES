@@ -142,33 +142,12 @@ typedef struct _js_last_states {
 } _js_last_states;
 typedef struct _js_device {
 	// dipendenti dall'os
-#if defined (_WIN32)
 	GUID product_guid;
 	// xinput
 	unsigned int xinput_player_index;
 	// dinput
 	void *di8device;
 	BYTE buffered;
-#else
-	int fd;
-	uTCHAR dev[30];
-#if defined (__OpenBSD__) || defined (__FreeBSD__)
-	SDBWORD hug_d_pad_state;
-	struct report_desc *repdesc;
-	struct _js_report {
-		int id;
-#if defined (__FreeBSD__)
-		void *buf;
-#else
-		struct usb_ctl_report *buf;
-#endif
-		int size;
-	} report;
-#endif
-#endif
-#if defined (__linux__)
-	uTCHAR uniq[64];
-#endif
 	// comuni
 	enum _js_gamepad_type type;
 	uTCHAR desc[128];
@@ -344,9 +323,6 @@ EXTERNC BYTE js_is_connected(int index);
 EXTERNC BYTE js_is_this(int index, _input_guid *guid);
 EXTERNC BYTE js_is_null(_input_guid *guid);
 
-#if !defined (_WIN32)
-EXTERNC void js_guid_create(_js_device *jdev);
-#endif
 EXTERNC void js_guid_set(int index, _input_guid *guid);
 EXTERNC void js_guid_unset(_input_guid *guid);
 EXTERNC BYTE js_guid_cmp(_input_guid *guid1, _input_guid *guid2);

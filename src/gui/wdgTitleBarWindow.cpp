@@ -241,26 +241,9 @@ wdgTitleBarWindow::wdgTitleBarWindow(QWidget *parent, Qt::WindowType window_type
 
 	layout_margins = verticalLayout->contentsMargins();
 
-#if !defined (_WIN32)
-	{
-		const char *qt_version = qVersion();
-
-		native_wm_disabled = (qt_version[0] == '6') || gfx.wayland.enabled;
-	}
-#else
+	// The custom (non native) window frame is the only mode: on Windows the
+	// native frame is never used.
 	native_wm_disabled = true;
-#endif
-
-	if (!native_wm_disabled) {
-		setWindowFlags(window_type);
-		verticalLayout->setContentsMargins(0, 0, 0, 0);
-		return;
-	}
-
-#if !defined (_WIN32)
-	// abilita la trasparenza della finestra
-	setAttribute(Qt::WA_TranslucentBackground);
-#endif
 
 	setWindowFlags(window_type | Qt::FramelessWindowHint | Qt::WindowCloseButtonHint | Qt::WindowMinMaxButtonsHint | Qt::WindowTitleHint);
 	setMouseTracking(true);
@@ -512,11 +495,7 @@ void wdgTitleBarWindow::set_geometry(void) {
 		center -= QPoint(size().width() / 2, size().height() / 2);
 		geom.setRect(center.x(), center.y(), sizeHint().width(), sizeHint().height());
 	}
-	if (gfx.wayland.enabled) {
-		resize(geom.width(), geom.height());
-	} else {
-		setGeometry(geom);
-	}
+	setGeometry(geom);
 }
 void wdgTitleBarWindow::is_in_desktop(int *x, int *y) {
 	QList<QScreen *> screens = QGuiApplication::screens();

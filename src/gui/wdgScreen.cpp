@@ -21,9 +21,7 @@
 #include <QtCore/QFileInfo>
 #include <QtCore/QUrl>
 #include <QtGui/QClipboard>
-#if defined (WITH_OPENGL)
 #include "opengl.h"
-#endif
 #include "wdgScreen.hpp"
 #include "mainWindow.hpp"
 #include "objSettings.hpp"
@@ -37,13 +35,7 @@
 
 wdgScreen::wdgScreen(QWidget *parent) : QWidget(parent) {
 	target = nullptr;
-#if defined (WITH_OPENGL)
 	wogl = new wdgOpenGL(this);
-#elif defined (WITH_D3D9)
-	wd3d9 = new wdgD3D9(this);
-
-	setAttribute(Qt::WA_PaintOnScreen);
-#endif
 	setAttribute(Qt::WA_NoSystemBackground);
 	setAttribute(Qt::WA_OpaquePaintEvent);
 
@@ -238,15 +230,9 @@ void wdgScreen::dropEvent(QDropEvent *event) {
 	}
 }
 void wdgScreen::resizeEvent(QResizeEvent *event) {
-#if defined (WITH_OPENGL)
 	wogl->setUpdatesEnabled(false);
 	wogl->resize(event->size());
 	wogl->setUpdatesEnabled(true);
-#elif defined (WITH_D3D9)
-	wd3d9->setUpdatesEnabled(false);
-	wd3d9->resize(event->size());
-	wd3d9->setUpdatesEnabled(true);
-#endif
 }
 
 void wdgScreen::cursor_init(void) {

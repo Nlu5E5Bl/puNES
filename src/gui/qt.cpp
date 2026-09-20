@@ -23,41 +23,9 @@
 #include <QtGui/QScreen>
 #include <QtGui/QFontDatabase>
 #include <QtCore/QBuffer>
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-#include <QtCore/QTextCodec>
-#else
 #include <QtCore/QStringDecoder>
-#endif
-#if defined (_WIN32)
-#include <QtCore/QtPlugin>
-#if defined (QT5_PLUGIN_QWINDOWS)
-Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
-#endif
-#if defined (QT_PLUGIN_QWINDOWSVISTASTYLE)
-Q_IMPORT_PLUGIN(QWindowsVistaStylePlugin)
-#endif
-#if defined (QT_PLUGIN_QGIF)
-Q_IMPORT_PLUGIN(QGifPlugin)
-#endif
-#if defined (QT_PLUGIN_QICO)
-Q_IMPORT_PLUGIN(QICOPlugin)
-#endif
-#if defined (QT_PLUGIN_QJPEG)
-Q_IMPORT_PLUGIN(QJpegPlugin)
-#endif
-#if defined (QT_PLUGIN_QSVG)
-Q_IMPORT_PLUGIN(QSvgPlugin)
-#endif
-#endif
-#if !defined (_WIN32)
-// mi serve per il std::thread::hardware_concurrency() del gui_hardware_concurrency.
-#include <thread>
-#endif
-#include <unistd.h>
 #include <libgen.h>
-#if defined (WITH_OPENGL)
 #include "opengl.h"
-#endif
 #include "mainApplication.hpp"
 #include "mainWindow.hpp"
 #include "objCheat.hpp"
@@ -81,9 +49,6 @@ Q_IMPORT_PLUGIN(QSvgPlugin)
 #include "vs_system.h"
 #include "dipswitch.h"
 #include "gui.h"
-#if defined (WITH_D3D9)
-#include "d3d9.h"
-#endif
 #include "cmd_line.h"
 #include "input/standard_controller.h"
 
@@ -142,15 +107,7 @@ BYTE gui_init(int *argc, char **argv) {
 	QFlags<mainApplication::Mode> mode = mainApplication::Mode::ExcludeAppVersion | mainApplication::Mode::ExcludeAppPath;
 	int i = 0;
 
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-	QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
-	QCoreApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-#if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
 	QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor);
-	//QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::Round);
-	//QGuiApplication::setHighDpiScaleFactorRoundingPolicy(Qt::HighDpiScaleFactorRoundingPolicy::PassThrough);
-#endif
 
 	memset(&gui, 0, sizeof(gui));
 	qt = {};
@@ -172,12 +129,6 @@ BYTE gui_init(int *argc, char **argv) {
 
 	gui_init_os();
 
-#if defined(WITH_D3D9)
-	if (d3d9_is_installed() == EXIT_ERROR) {
-		return (EXIT_ERROR);
-	}
-#endif
-
 	return (qt.app->control_base_folders());
 }
 void gui_quit(void) {}
@@ -186,10 +137,8 @@ BYTE gui_control_instance(void) {
 		if (info.rom.file[0]) {
 			QFileInfo finfo(uQString(info.rom.file));
 
-#if defined (_WIN32)
 			// https://github.com/itay-grudev/SingleApplication/blob/master/Windows.md
 			AllowSetForegroundWindow(DWORD(qt.app->primaryPid()));
-#endif
 			if (finfo.exists()) {
 				unsigned int count = 0;
 
@@ -208,7 +157,6 @@ BYTE gui_control_instance(void) {
 	return (EXIT_OK);
 }
 BYTE gui_create(void) {
-#if defined (WITH_OPENGL)
 	QSurfaceFormat fmt;
 
 	fmt.setRenderableType(QSurfaceFormat::OpenGL);
@@ -220,7 +168,6 @@ BYTE gui_create(void) {
 	fmt.setAlphaBufferSize(8);
 	fmt.setSwapInterval(cfg->vsync);
 	QSurfaceFormat::setDefaultFormat(fmt);
-#endif
 
 	// Thx to https://people.mpi-inf.mpg.de/~uwe/misc/uw-ttyp0/
 	// "Ttyp0_11" (unicode 11px)
@@ -595,21 +542,9 @@ void gui_set_window_size(void) {
 	int w = gfx.w[VIDEO_MODE], h = gfx.h[VIDEO_MODE];
 	bool toolbar = false;
 
-#if defined (_WIN64)
 	if (gfx.type_of_fscreen_in_use == FULLSCR_IN_WINDOW) {
 		return;
 	}
-#else
-#if QT_VERSION == QT_VERSION_CHECK(5, 12, 8)
-	if (gfx.type_of_fscreen_in_use == FULLSCR) {
-		return;
-	}
-#else
-	if (cfg->fullscreen) {
-		return;
-	}
-#endif
-#endif
 
 	if ((cfg->screen_rotation == ROTATE_90) || (cfg->screen_rotation == ROTATE_270)) {
 		w = gfx.h[VIDEO_MODE];
@@ -638,15 +573,14 @@ void gui_set_window_size(void) {
 		h += (toolbar ? 0 : qt.mwin->wd->toolbar->sizeHint().height());
 	}
 
-	// nella versione D3D9, con le shaders CRT, quando e' visibile il menu (le toolbars non influiscono) la shader
+	// con le shaders CRT, quando e' visibile il menu (le toolbars non influiscono) la shader
 	// non funziona correttamente, appare una riga al centro dell'immagine. Sembra quasi che l'altezza dello screen
 	// non venga applicata correttamente dalle QT ma che in presenza del menu venga ridotta di 1.
-	// Aumentare di 1 l'altrezza quando e' visibile mitiga il problema e non sembra influenzi in alcun modo
-	// anche la versione OpenGL.
+	// Aumentare di 1 l'altrezza quando e' visibile mitiga il problema.
 	h += (qt.mwin->wd->menubar->isHidden() ? 0 : qt.mwin->wd->menubar->sizeHint().height() + 1);
 	h += (qt.mwin->wd->statusbar->isHidden() ? 0 : qt.mwin->wd->statusbar->sizeHint().height());
 
-#if defined (_WIN32) && defined(WITH_OPENGL)
+#if defined (_WIN32)
 	// when a window is using an OpenGL based surface and is appearing in full screen mode,
 	// problems can occur with other top-level windows which are part of the application. Due
 	// to limitations of the Windows DWM, compositing is not handled correctly for OpenGL based
@@ -972,11 +906,7 @@ void gui_decode_all_input_events(void) {
 }
 
 void gui_screen_update(void) {
-#if defined (WITH_OPENGL)
 	qt.screen->wogl->update();
-#elif defined (WITH_D3D9)
-	qt.screen->wd3d9->update();
-#endif
 	qt.dset->wd->widget_Settings_Video->widget_Palette_Editor->widget_Palette_PPU->update();
 }
 
@@ -1059,7 +989,6 @@ void gui_unsupported_hardware(void) {
 	qt.mwin->wd->unsupported_hardware();
 }
 
-#if defined (WITH_OPENGL)
 void gui_wdgopengl_make_current(void) {
 	if (gui.start) {
 		qt.screen->wogl->makeCurrent();
@@ -1070,33 +999,12 @@ unsigned int gui_wdgopengl_framebuffer_id(void) {
 }
 
 void gui_screen_info(void) {
-#if !defined (_WIN32)
-	const static char *cwdisplay = "WAYLAND_DISPLAY";
-#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
-	QByteArray qbwdisplay = qgetenv(cwdisplay);
-
-	gfx.wayland.enabled = qbwdisplay.length() > 0 ? TRUE : FALSE;
-#else
-	gfx.wayland.enabled = qEnvironmentVariableIsSet(cwdisplay) ? TRUE : FALSE;
-#endif
-	if (gfx.wayland.enabled) {
-#if QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
-		gfx.only_fullscreen_in_window = TRUE;
-#else
-		gfx.only_fullscreen_in_window = FALSE;
-#endif
-	}
-#else
-	gfx.wayland.enabled = FALSE;
-	gfx.only_fullscreen_in_window = FALSE;
-#endif
 	gfx.bit_per_pixel = mainApplication::primaryScreen()->depth();
 }
 
 uint32_t gui_color(BYTE a, BYTE r, BYTE g, BYTE b) {
 	return (qRgba(r, g, b, a));
 }
-#endif
 
 BYTE gui_load_lut(void *l, const uTCHAR *path) {
 	QImage tmp;
@@ -1149,8 +1057,9 @@ void gui_save_screenshot(int w, int h, int stride, char *buffer, BYTE flip) {
 #endif
 	}
 
-	file.open(QIODevice::WriteOnly);
-	screenshot.save(&file, "PNG");
+	if (file.open(QIODevice::WriteOnly)) {
+		screenshot.save(&file, "PNG");
+	}
 }
 void gui_save_slot_preview_to_png(int slot, void **dst, size_t *size) {
 	QImage *preview = (QImage *)gui_overlay_slot_preview_get(slot);
@@ -1188,19 +1097,7 @@ int gui_utf_strcasecmp(uTCHAR *s0, uTCHAR *s1) {
 	return (QString::compare(uQString(s0), uQString(s1), Qt::CaseInsensitive));
 }
 
-#if !defined (_WIN32)
-unsigned int gui_hardware_concurrency(void) {
-	return (std::thread::hardware_concurrency());
-}
-#endif
-
-#if defined (__linux__)
-#include "os_linux.h"
-#elif defined (__OpenBSD__) || defined (__FreeBSD__)
-#include "os_bsd.h"
-#elif defined (_WIN32)
 #include "os_windows.h"
-#endif
 
 void gui_warning(const uTCHAR *txt) {
 	QMessageBox msgBox;

@@ -65,11 +65,6 @@ wdgDlgKeyboard::wdgDlgKeyboard(QWidget *parent) : wdgTitleBarDialog(parent) {
 wdgDlgKeyboard::~wdgDlgKeyboard() = default;
 
 void wdgDlgKeyboard::resizeEvent(QResizeEvent *event) {
-	// sotto wayland (almeno con GNOME) ogni tanto ricevo un evento di Resize
-	// spontaneo (con dimensioni non corrette) che provo a filtrare
-	if (gfx.wayland.enabled &&  event->spontaneous()) {
-		setMaximumSize((event->oldSize()));
-	}
 	wdgTitleBarDialog::resizeEvent(event);
 }
 void wdgDlgKeyboard::closeEvent(QCloseEvent *event) {

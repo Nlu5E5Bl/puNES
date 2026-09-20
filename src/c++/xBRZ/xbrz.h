@@ -17,7 +17,9 @@
 #define XBRZ_HEADER_3847894708239054
 
 #include "common.h"
+#if !defined (NDEBUG)
 #define NDEBUG
+#endif
 #if defined (_WIN32)
 #include "win.h"
 #endif

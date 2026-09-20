@@ -20,11 +20,7 @@
 #include "c++/xBRZ/xbrz.h"
 #include "thread_def.h"
 
-#if defined (WITH_D3D9)
-#define color_format xbrz::ColorFormat::ARGB
-#elif defined (WITH_OPENGL)
 #define color_format xbrz::ColorFormat::RGB
-#endif
 
 extern "C" void xbrz_scale(BYTE factor, const WORD *src, uint32_t *trg, uint32_t *palette, int width, int height) {
 	xbrz::scale(factor, src, trg, palette, width, height, color_format);
